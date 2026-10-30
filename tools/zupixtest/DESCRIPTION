@@ -1,0 +1,19 @@
+Package: zupixtest
+Title: Proves zupix's C Table from Outside
+Version: 0.0.0.9000
+Authors@R: 
+    person("Pedro", "Baltazar", , "pedrobtz@gmail.com", role = c("aut", "cre"))
+Description: A deliberately minimal consumer of zupix, existing only to
+    prove from outside the package that its registered C table resolves,
+    decodes, reads metadata and encodes as design section 7 says, and
+    refuses an ABI version it does not speak. Not distributed; built and
+    run by CI.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports: 
+    zupix
+LinkingTo: 
+    zupix
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

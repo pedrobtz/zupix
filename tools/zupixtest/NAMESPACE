@@ -1,0 +1,14 @@
+# Hand-written. The importFrom() loads zupix's namespace, and with it its
+# DLL, before R_GetCCallable() is asked for the table (Writing R
+# Extensions, "Linking to native routines in other packages").
+useDynLib(zupixtest, .registration = TRUE, .fixes = "C_")
+importFrom(zupix, pix_read)
+
+export(zt_table)
+export(zt_future_abi)
+export(zt_probe)
+export(zt_decode)
+export(zt_metadata)
+export(zt_encode)
+export(zt_encode_failing_sink)
+export(zt_status_string)
