@@ -105,6 +105,13 @@ static zpx_status scan_png(const uint8_t *buf, size_t len, zpx_meta *m,
       }
     } else if (memcmp(type, "tRNS", 4) == 0) {
       trns = 1;
+      if ((ct == 0 && n >= 2) || (ct == 2 && n >= 6)) {
+        /* Keys wider than the depth are masked, as libpng does. */
+        uint32_t mask = m->bits >= 16 ? 0xffffu : (1u << m->bits) - 1u;
+        m->has_trns_key = 1;
+        for (int k = 0; k < 3; k++)
+          m->trns_key[k] = (uint16_t) (be16(d + (ct == 0 ? 0 : 2 * k)) & mask);
+      }
     } else if (memcmp(type, "acTL", 4) == 0) {
       m->animated = 1;
     } else if (memcmp(type, "gAMA", 4) == 0 && n == 4) {
