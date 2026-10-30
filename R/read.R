@@ -1,8 +1,11 @@
 #' Read an image
 #'
-#' Decodes a PNG or QOI image into one of three shapes. The pixels are the
-#' ones the file holds: no colour conversion, gamma or ICC profile is
-#' applied.
+#' Decodes a PNG, JPEG, WebP or QOI image into one of three shapes. The
+#' pixels are the ones the file holds: no colour conversion, gamma or ICC
+#' profile is applied, and EXIF orientation is applied only when asked.
+#' Animated PNG and WebP decode their first frame, with attribute
+#' `animated` set to `TRUE`. CMYK and YCCK JPEG decode to RGB without
+#' colour management.
 #'
 #' @param x A file path, a raw vector holding the file's bytes, or a
 #'   connection, which is read whole (up to `max_bytes` of `limits`).
@@ -22,9 +25,11 @@
 #'   transparency. A larger number adds channels (grey to RGB, an opaque
 #'   alpha); a smaller one is an error, because removing colour or alpha is
 #'   a colour decision. Not used by `as = "native"`.
+#' @param orient `TRUE` applies the image's EXIF orientation (see
+#'   [pix_orient()]); `FALSE`, the default, returns the pixels as stored.
 #' @param format `"auto"` reads the format from the file's signature, never
-#'   its extension. A named format (`"png"`, `"qoi"`) that disagrees with
-#'   the signature is an error.
+#'   its extension. A named format (`"png"`, `"jpeg"`, `"webp"`, `"qoi"`)
+#'   that disagrees with the signature is an error.
 #' @param limits Limits checked before anything is allocated; see
 #'   [pix_limits()].
 #' @return The image, in the shape `as` asks for.
@@ -41,12 +46,16 @@ pix_read <- function(
   as = c("native", "double", "integer"),
   bits = NULL,
   channels = NULL,
+  orient = FALSE,
   format = "auto",
   limits = pix_limits()
 ) {
   as <- match_arg(as, c("native", "double", "integer"), "as")
   bits <- check_choice_int(bits, c(8L, 16L), "bits")
   channels <- check_choice_int(channels, 1:4, "channels")
+  if (!isTRUE(orient) && !isFALSE(orient)) {
+    zpx_input_error("orient", "`orient` must be TRUE or FALSE.")
+  }
   format <- match_arg(format, c("auto", zpx_formats), "format")
   lim <- check_limits(limits)
 
@@ -69,15 +78,21 @@ pix_read <- function(
     dim(out) <- c(res$height, res$width)
     attr(out, "channels") <- 4L
     class(out) <- "nativeRaster"
-    return(out)
-  }
-  dim(out) <- if (res$channels == 1L) {
-    c(res$height, res$width)
   } else {
-    c(res$height, res$width, res$channels)
+    dim(out) <- if (res$channels == 1L) {
+      c(res$height, res$width)
+    } else {
+      c(res$height, res$width, res$channels)
+    }
+    if (as == "integer") {
+      attr(out, "bits") <- res$bits
+    }
   }
-  if (as == "integer") {
-    attr(out, "bits") <- res$bits
+  if (orient && res$orientation > 1L) {
+    out <- pix_orient(out, res$orientation)
+  }
+  if (res$animated) {
+    attr(out, "animated") <- TRUE
   }
   out
 }

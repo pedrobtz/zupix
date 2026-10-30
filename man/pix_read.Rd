@@ -9,6 +9,7 @@ pix_read(
   as = c("native", "double", "integer"),
   bits = NULL,
   channels = NULL,
+  orient = FALSE,
   format = "auto",
   limits = pix_limits()
 )
@@ -38,9 +39,12 @@ transparency. A larger number adds channels (grey to RGB, an opaque
 alpha); a smaller one is an error, because removing colour or alpha is
 a colour decision. Not used by \code{as = "native"}.}
 
+\item{orient}{\code{TRUE} applies the image's EXIF orientation (see
+\code{\link[=pix_orient]{pix_orient()}}); \code{FALSE}, the default, returns the pixels as stored.}
+
 \item{format}{\code{"auto"} reads the format from the file's signature, never
-its extension. A named format (\code{"png"}, \code{"qoi"}) that disagrees with
-the signature is an error.}
+its extension. A named format (\code{"png"}, \code{"jpeg"}, \code{"webp"}, \code{"qoi"})
+that disagrees with the signature is an error.}
 
 \item{limits}{Limits checked before anything is allocated; see
 \code{\link[=pix_limits]{pix_limits()}}.}
@@ -49,9 +53,12 @@ the signature is an error.}
 The image, in the shape \code{as} asks for.
 }
 \description{
-Decodes a PNG or QOI image into one of three shapes. The pixels are the
-ones the file holds: no colour conversion, gamma or ICC profile is
-applied.
+Decodes a PNG, JPEG, WebP or QOI image into one of three shapes. The
+pixels are the ones the file holds: no colour conversion, gamma or ICC
+profile is applied, and EXIF orientation is applied only when asked.
+Animated PNG and WebP decode their first frame, with attribute
+\code{animated} set to \code{TRUE}. CMYK and YCCK JPEG decode to RGB without
+colour management.
 }
 \examples{
 f <- system.file("extdata", "gradient.png", package = "zupix")
