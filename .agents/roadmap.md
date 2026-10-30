@@ -18,7 +18,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | --- | --- | --- | --- | --- | --- |
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupix/issues/2) | [#15](https://github.com/pedrobtz/zupix/pull/15) | 2026-10-30 |
 | 1 | [Vendored codecs and the Wuffs gate](#stage-1--vendored-codecs-and-the-wuffs-gate) | full | [#3](https://github.com/pedrobtz/zupix/issues/3) | [#16](https://github.com/pedrobtz/zupix/pull/16) | 2026-10-30 |
-| 2 | [Decoding PNG and QOI](#stage-2--decoding-png-and-qoi) | full | [#4](https://github.com/pedrobtz/zupix/issues/4) | | |
+| 2 | [Decoding PNG and QOI](#stage-2--decoding-png-and-qoi) | full | [#4](https://github.com/pedrobtz/zupix/issues/4) | | 2026-10-30 |
 | 3 | [JPEG, WebP and metadata](#stage-3--jpeg-webp-and-metadata) | full | [#5](https://github.com/pedrobtz/zupix/issues/5) | | |
 | 4 | [Lossless encoders](#stage-4--lossless-encoders) | quick | [#6](https://github.com/pedrobtz/zupix/issues/6) | | |
 | 5 | [Lossy encoders and metadata embedding](#stage-5--lossy-encoders-and-metadata-embedding) | quick | [#7](https://github.com/pedrobtz/zupix/issues/7) | | |
@@ -153,6 +153,20 @@ every limit checked before allocation.
 - The condition classes of §8, with a constructor helper.
 - `pix_format()`. Input from a path, a raw vector or a connection read
   whole (D18).
+
+**Recorded 2026-10-30.** Deviations, none changing the API: (1) PNG's
+channel count needs IHDR's colour type and whether `tRNS` precedes `IDAT`,
+which Wuffs's reported pixel format cannot give for 16-bit images, so a
+minimal bounded header walk (`src/zpx_png.c`) lands here rather than with
+Stage 3's scanners; it also does the IHDR-versus-Wuffs size check of §6.4.
+(2) Array outputs go through a row-major RGBA intermediate (R must
+transpose to column-major anyway), which §6.6 does not mention; it is
+counted in `max_bytes`, and an 8-bit `nativeRaster` still decodes in
+place. (3) JPEG and WebP are sniffed but raise `zupix_unsupported_error`
+until Stage 3. (4) Q5 is settled by D8: no warning for QOI's `linear`
+colourspace. (5) The `qoi` differential test reads from a file, because
+qoi 0.1.0's `readQOI()` crashes R on a raw vector. `x` also accepts URLs,
+through the family's shared `R/zu_source.R`, copied verbatim from zuxml.
 
 **Exit criteria.**
 
