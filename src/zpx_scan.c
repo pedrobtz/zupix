@@ -307,6 +307,7 @@ static zpx_status scan_webp(const uint8_t *buf, size_t len, zpx_meta *m,
   uint32_t riff;
   int vp8x = 0, seen_bits = 0, lossy = 0, bits_alpha = 0, flags = 0;
   uint32_t bw = 0, bh = 0;
+  size_t vp8l_off = 0, vp8l_len = 0;
 
   if (len < 20) return fail(detail, "WebP is truncated");
   riff = le32(buf + 4);
@@ -365,11 +366,25 @@ static zpx_status scan_webp(const uint8_t *buf, size_t len, zpx_meta *m,
     } else if (vp8x && !seen_bits &&
                webp_bitstream(fourcc, p, n, &bw, &bh, &bits_alpha, &lossy)) {
       seen_bits = 1;
+      if (!lossy) {
+        vp8l_off = pos;
+        vp8l_len = 8 + padded;
+        if (vp8l_len > end - pos) vp8l_len = 8 + n;
+      }
     }
     if (padded > end - pos - 8) break; /* an odd last chunk without pad */
     pos += 8 + padded;
   }
   if (!seen_bits) return fail(detail, "WebP has no VP8 or VP8L bitstream");
+  if (vp8x && !m->animated && !lossy && vp8l_off > 0) {
+    m->webp_rebuild = 1;
+    m->frame_off = vp8l_off;
+    m->frame_len = vp8l_len;
+    m->frame_x = m->frame_y = 0;
+    m->frame_w = m->width;
+    m->frame_h = m->height;
+    m->frame_alph = 0;
+  }
 
   m->bits = 8;
   /* An animated file's alpha flag is the writer's to set; a first frame

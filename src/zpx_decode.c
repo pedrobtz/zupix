@@ -177,10 +177,11 @@ static zpx_status probe(const uint8_t *buf, size_t len,
   if (pixels > limits->max_pixels)
     return limit(out, ZPX_LIMIT_PIXELS, pixels, limits->max_pixels);
 
-  if (m->format == ZPX_FMT_WEBP && m->animated) {
-    /* D13: the first frame. Wuffs decodes still WebP only, so the frame's
-     * chunks are rebuilt as one; compositing a frame smaller than the
-     * canvas is not implemented. */
+  if (m->format == ZPX_FMT_WEBP && (m->animated || m->webp_rebuild)) {
+    /* D13: an animated file's first frame. Wuffs decodes still WebP only,
+     * so the frame's chunks are rebuilt as one; compositing a frame smaller
+     * than the canvas is not implemented. An extended still file with a
+     * VP8L bitstream is rebuilt the same way (see zpx_meta.webp_rebuild). */
     if (m->frame_len == 0) {
       out->detail = "animated WebP has no frames";
       return ZPX_ERR_DECODE;

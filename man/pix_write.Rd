@@ -4,6 +4,8 @@
 \alias{pix_write}
 \alias{pix_write_png}
 \alias{pix_write_qoi}
+\alias{pix_write_jpeg}
+\alias{pix_write_webp}
 \title{Write an image}
 \usage{
 pix_write(x, file, format = NULL, ...)
@@ -19,13 +21,34 @@ pix_write_png(
 )
 
 pix_write_qoi(x, file = NULL, colourspace = c("srgb", "linear"))
+
+pix_write_jpeg(
+  x,
+  file = NULL,
+  quality = 90L,
+  subsampling = "4:2:0",
+  progressive = FALSE,
+  icc = NULL,
+  exif = NULL
+)
+
+pix_write_webp(
+  x,
+  file = NULL,
+  quality = 75,
+  lossless = FALSE,
+  method = 4L,
+  icc = NULL,
+  exif = NULL
+)
 }
 \arguments{
 \item{x}{The image.}
 
 \item{file}{A path to write, or \code{NULL} to return the encoded bytes.}
 
-\item{format}{\code{NULL} to use \code{file}'s extension, or \code{"png"} or \code{"qoi"}.}
+\item{format}{\code{NULL} to use \code{file}'s extension (\code{.png}, \code{.jpg}, \code{.jpeg},
+\code{.webp}, \code{.qoi}), or \code{"png"}, \code{"jpeg"}, \code{"webp"} or \code{"qoi"}.}
 
 \item{...}{Arguments for the format's writer.}
 
@@ -45,6 +68,20 @@ does not allow both \code{icc} and \code{srgb}.}
 
 \item{colourspace}{The QOI header's colourspace byte: \code{"srgb"} or
 \code{"linear"}. It is a label only; pixels are written as given.}
+
+\item{quality}{For JPEG, 1 to 100 on libjpeg's scale (\code{90} here means
+what it means to \code{jpeg::writeJPEG(quality = 0.9)}). For WebP, 0 to 100;
+with \code{lossless = TRUE} it trades speed for size instead.}
+
+\item{subsampling}{JPEG chroma subsampling: \code{"4:2:0"}, \code{"4:2:2"} or
+\code{"4:4:4"}.}
+
+\item{progressive}{\code{TRUE} writes a progressive JPEG.}
+
+\item{lossless}{\code{TRUE} writes lossless WebP: the pixels read back exactly.}
+
+\item{method}{WebP's speed and size trade-off, 0 (fastest) to 6
+(smallest).}
 }
 \value{
 With \code{file}, \code{file}, invisibly; with \code{file = NULL}, a raw vector.
@@ -72,6 +109,15 @@ channels (grey, grey and alpha, RGB, RGBA). \code{NA} is an error.
 optional ICC profile, EXIF block or sRGB rendering intent.
 
 \item \code{pix_write_qoi()}: QOI, 8-bit RGB or RGBA; grey widens to RGB.
+
+\item \code{pix_write_jpeg()}: JPEG, 8-bit grey or RGB through libjpeg-turbo, with
+optimised Huffman tables, an optional ICC profile (\code{APP2}) and EXIF
+block (\code{APP1}). An alpha channel must be fully opaque, since JPEG cannot
+store transparency; 16-bit samples are rounded to 8 bits.
+
+\item \code{pix_write_webp()}: WebP through libwebp, lossy or lossless, RGB or
+RGBA (grey widens to RGB), with an optional ICC profile and EXIF block
+in zupix's own \code{VP8X} container. 16-bit samples are rounded to 8 bits.
 
 }}
 \examples{

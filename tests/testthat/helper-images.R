@@ -329,3 +329,18 @@ random_image <- function(h, w, ch, bits, seed = 1L) {
   attr(a, "bits") <- bits
   a
 }
+
+# A deterministic smooth 120 x 160 RGB image (integer, 8-bit), for lossy
+# encoders, and its PSNR against a decoded copy.
+smooth_rgb <- function(h = 120L, w = 160L) {
+  x <- rep(seq(0, 1, length.out = w), each = h)
+  y <- rep(seq(0, 1, length.out = h), times = w)
+  a <- c(0.5 + 0.4 * sin(6 * x), 0.5 + 0.4 * cos(5 * y), (x + y) / 2)
+  img <- array(as.integer(round(a * 255)), c(h, w, 3L))
+  attr(img, "bits") <- 8L
+  img
+}
+psnr <- function(decoded, original) {
+  mse <- mean((as.numeric(decoded) - as.numeric(original))^2)
+  10 * log10(255^2 / mse)
+}

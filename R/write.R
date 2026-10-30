@@ -15,7 +15,8 @@
 #'
 #' @param x The image.
 #' @param file A path to write, or `NULL` to return the encoded bytes.
-#' @param format `NULL` to use `file`'s extension, or `"png"` or `"qoi"`.
+#' @param format `NULL` to use `file`'s extension (`.png`, `.jpg`, `.jpeg`,
+#'   `.webp`, `.qoi`), or `"png"`, `"jpeg"`, `"webp"` or `"qoi"`.
 #' @param ... Arguments for the format's writer.
 #' @return With `file`, `file`, invisibly; with `file = NULL`, a raw vector.
 #' @seealso [pix_read()], and [zupix-conditions] for the errors raised.
@@ -52,13 +53,9 @@ pix_write <- function(x, file, format = NULL, ...) {
   switch(
     format,
     png = pix_write_png(x, file, ...),
-    qoi = pix_write_qoi(x, file, ...),
-    zpx_abort(
-      "unsupported",
-      sprintf("Writing %s arrives in a later version.", toupper(format)),
-      format = format,
-      detail = NA_character_
-    )
+    jpeg = pix_write_jpeg(x, file, ...),
+    webp = pix_write_webp(x, file, ...),
+    qoi = pix_write_qoi(x, file, ...)
   )
 }
 
@@ -95,7 +92,12 @@ pix_write_png <- function(
     zpx_input_error("srgb", "PNG allows `icc` or `srgb`, not both.")
   }
   px <- prepare_pixels(x, bits)
-  opts <- list(compression, icc, exif, if (is.null(srgb)) -1L else srgb, 0L)
+  opts <- encode_opts(
+    compression = compression,
+    icc = icc,
+    exif = exif,
+    srgb = if (is.null(srgb)) -1L else srgb
+  )
   encode(px, "png", opts, file)
 }
 
@@ -112,8 +114,131 @@ pix_write_qoi <- function(x, file = NULL, colourspace = c("srgb", "linear")) {
       "QOI is 8-bit; read or convert the image with `bits = 8L`."
     )
   }
-  opts <- list(0L, NULL, NULL, -1L, as.integer(colourspace == "linear"))
+  opts <- encode_opts(colourspace = as.integer(colourspace == "linear"))
   encode(px, "qoi", opts, file)
+}
+
+#' @describeIn pix_write JPEG, 8-bit grey or RGB through libjpeg-turbo, with
+#'   optimised Huffman tables, an optional ICC profile (`APP2`) and EXIF
+#'   block (`APP1`). An alpha channel must be fully opaque, since JPEG cannot
+#'   store transparency; 16-bit samples are rounded to 8 bits.
+#' @param quality For JPEG, 1 to 100 on libjpeg's scale (`90` here means
+#'   what it means to `jpeg::writeJPEG(quality = 0.9)`). For WebP, 0 to 100;
+#'   with `lossless = TRUE` it trades speed for size instead.
+#' @param subsampling JPEG chroma subsampling: `"4:2:0"`, `"4:2:2"` or
+#'   `"4:4:4"`.
+#' @param progressive `TRUE` writes a progressive JPEG.
+#' @export
+pix_write_jpeg <- function(
+  x,
+  file = NULL,
+  quality = 90L,
+  subsampling = "4:2:0",
+  progressive = FALSE,
+  icc = NULL,
+  exif = NULL
+) {
+  quality <- check_choice_int(quality, 1:100, "quality")
+  if (is.null(quality)) {
+    zpx_input_error("quality", "`quality` must be 1 to 100.")
+  }
+  subsampling <- match_arg(
+    subsampling,
+    c("4:4:4", "4:2:2", "4:2:0"),
+    "subsampling"
+  )
+  check_flag(progressive, "progressive")
+  check_raw_or_null(icc, "icc")
+  check_raw_or_null(exif, "exif")
+  px <- prepare_pixels(x, 8L)
+  opts <- encode_opts(
+    icc = icc,
+    exif = exif,
+    quality = quality,
+    subsampling = match(subsampling, c("4:4:4", "4:2:2", "4:2:0")) - 1L,
+    progressive = progressive
+  )
+  encode(px, "jpeg", opts, file)
+}
+
+#' @describeIn pix_write WebP through libwebp, lossy or lossless, RGB or
+#'   RGBA (grey widens to RGB), with an optional ICC profile and EXIF block
+#'   in zupix's own `VP8X` container. 16-bit samples are rounded to 8 bits.
+#' @param lossless `TRUE` writes lossless WebP: the pixels read back exactly.
+#' @param method WebP's speed and size trade-off, 0 (fastest) to 6
+#'   (smallest).
+#' @export
+pix_write_webp <- function(
+  x,
+  file = NULL,
+  quality = 75,
+  lossless = FALSE,
+  method = 4L,
+  icc = NULL,
+  exif = NULL
+) {
+  if (
+    !is.numeric(quality) ||
+      length(quality) != 1L ||
+      is.na(quality) ||
+      quality < 0 ||
+      quality > 100
+  ) {
+    zpx_input_error("quality", "`quality` must be a number from 0 to 100.")
+  }
+  check_flag(lossless, "lossless")
+  method <- check_choice_int(method, 0:6, "method")
+  if (is.null(method)) {
+    zpx_input_error("method", "`method` must be 0 to 6.")
+  }
+  check_raw_or_null(icc, "icc")
+  check_raw_or_null(exif, "exif")
+  px <- prepare_pixels(x, 8L)
+  opts <- encode_opts(
+    icc = icc,
+    exif = exif,
+    quality = as.double(quality),
+    lossless = lossless,
+    method = method
+  )
+  encode(px, "webp", opts, file)
+}
+
+# The options list zpx_r_encode() reads, by position.
+encode_opts <- function(
+  compression = 6L,
+  icc = NULL,
+  exif = NULL,
+  srgb = -1L,
+  colourspace = 0L,
+  quality = 90,
+  subsampling = 2L,
+  progressive = FALSE,
+  lossless = FALSE,
+  method = 4L
+) {
+  list(
+    compression,
+    icc,
+    exif,
+    srgb,
+    colourspace,
+    quality,
+    subsampling,
+    progressive,
+    lossless,
+    method
+  )
+}
+
+check_flag <- function(x, arg, call = sys.call(-1L)) {
+  if (!isTRUE(x) && !isFALSE(x)) {
+    zpx_input_error(
+      arg,
+      sprintf("`%s` must be TRUE or FALSE.", arg),
+      call = call
+    )
+  }
 }
 
 encode <- function(px, format, opts, file, call = sys.call(-1L)) {
