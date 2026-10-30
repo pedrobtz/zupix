@@ -25,5 +25,16 @@ Authors:
   \item Pedro Baltazar \email{pedrobtz@gmail.com} [copyright holder]
 }
 
+Other contributors:
+\itemize{
+  \item The Wuffs Authors (bundled Wuffs library) [copyright holder]
+  \item Thomas G. Lane (bundled libjpeg-turbo, from the Independent JPEG Group's software) [contributor, copyright holder]
+  \item Guido Vollbeding (bundled libjpeg-turbo, from the Independent JPEG Group's software) [contributor, copyright holder]
+  \item D. R. Commander (bundled libjpeg-turbo) [contributor, copyright holder]
+  \item Google Inc. (bundled libwebp, and parts of bundled libjpeg-turbo) [copyright holder]
+  \item Dominic Szablewski (bundled qoi.h) [contributor, copyright holder]
+  \item Other contributors to libjpeg-turbo (see inst/COPYRIGHTS) [copyright holder]
+}
+
 }
 \keyword{internal}

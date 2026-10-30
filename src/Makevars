@@ -1,0 +1,195 @@
+# Portable make only: no GNU-make conditionals, no $(shell), and no -W*
+# overrides, each of which costs a CRAN rejection or a GNU make requirement.
+#
+# The defines are tools/vendor/manifest.tsv's, which tools/vendor/verify
+# checks: NO_GETENV stops libjpeg-turbo's memory manager reading the
+# environment; NDEBUG compiles libwebp's assert()s out (an assert links
+# abort(), which R packages may not call); and WEBP_EXTERN=extern stops
+# libwebp and sharpyuv marking their API visibility("default"), which would
+# override $(C_VISIBILITY) and export it from zupix.so.
+#
+# jpeg-config/ holds the configuration headers CMake would generate for
+# libjpeg-turbo; vendor/libwebp is on the path because libwebp includes its
+# own headers as "src/dsp/dsp.h" from its root.
+PKG_CPPFLAGS = -Ijpeg-config -Ivendor/libjpeg-turbo -Ivendor/libwebp \
+	-DNO_GETENV -DNDEBUG -DWEBP_EXTERN=extern
+PKG_CFLAGS = $(C_VISIBILITY)
+PKG_LIBS = -lz
+
+# The compression half of libjpeg-turbo's libjpeg API library: the
+# translation units CMake builds for it, minus every decompression, arithmetic
+# coding and SIMD unit. The wrapper/ files compile each sample-size variant.
+JPEG_OBJECTS = \
+	vendor/libjpeg-turbo/jcapimin.o \
+	vendor/libjpeg-turbo/wrapper/jcapistd-8.o \
+	vendor/libjpeg-turbo/wrapper/jcapistd-12.o \
+	vendor/libjpeg-turbo/wrapper/jcapistd-16.o \
+	vendor/libjpeg-turbo/wrapper/jccoefct-8.o \
+	vendor/libjpeg-turbo/wrapper/jccoefct-12.o \
+	vendor/libjpeg-turbo/wrapper/jccolor-8.o \
+	vendor/libjpeg-turbo/wrapper/jccolor-12.o \
+	vendor/libjpeg-turbo/wrapper/jccolor-16.o \
+	vendor/libjpeg-turbo/wrapper/jcdctmgr-8.o \
+	vendor/libjpeg-turbo/wrapper/jcdctmgr-12.o \
+	vendor/libjpeg-turbo/wrapper/jcdiffct-8.o \
+	vendor/libjpeg-turbo/wrapper/jcdiffct-12.o \
+	vendor/libjpeg-turbo/wrapper/jcdiffct-16.o \
+	vendor/libjpeg-turbo/jchuff.o \
+	vendor/libjpeg-turbo/jcicc.o \
+	vendor/libjpeg-turbo/jcinit.o \
+	vendor/libjpeg-turbo/jclhuff.o \
+	vendor/libjpeg-turbo/wrapper/jclossls-8.o \
+	vendor/libjpeg-turbo/wrapper/jclossls-12.o \
+	vendor/libjpeg-turbo/wrapper/jclossls-16.o \
+	vendor/libjpeg-turbo/wrapper/jcmainct-8.o \
+	vendor/libjpeg-turbo/wrapper/jcmainct-12.o \
+	vendor/libjpeg-turbo/wrapper/jcmainct-16.o \
+	vendor/libjpeg-turbo/jcmarker.o \
+	vendor/libjpeg-turbo/jcmaster.o \
+	vendor/libjpeg-turbo/jcomapi.o \
+	vendor/libjpeg-turbo/jcparam.o \
+	vendor/libjpeg-turbo/jcphuff.o \
+	vendor/libjpeg-turbo/wrapper/jcprepct-8.o \
+	vendor/libjpeg-turbo/wrapper/jcprepct-12.o \
+	vendor/libjpeg-turbo/wrapper/jcprepct-16.o \
+	vendor/libjpeg-turbo/wrapper/jcsample-8.o \
+	vendor/libjpeg-turbo/wrapper/jcsample-12.o \
+	vendor/libjpeg-turbo/wrapper/jcsample-16.o \
+	vendor/libjpeg-turbo/jerror.o \
+	vendor/libjpeg-turbo/jfdctflt.o \
+	vendor/libjpeg-turbo/wrapper/jfdctfst-8.o \
+	vendor/libjpeg-turbo/wrapper/jfdctfst-12.o \
+	vendor/libjpeg-turbo/wrapper/jfdctint-8.o \
+	vendor/libjpeg-turbo/wrapper/jfdctint-12.o \
+	vendor/libjpeg-turbo/jmemmgr.o \
+	vendor/libjpeg-turbo/jmemnobs.o \
+	vendor/libjpeg-turbo/jpeg_nbits.o \
+	vendor/libjpeg-turbo/wrapper/jutils-8.o \
+	vendor/libjpeg-turbo/wrapper/jutils-12.o \
+	vendor/libjpeg-turbo/wrapper/jutils-16.o
+
+# Upstream's libwebp minus src/dec: the encoder, dsp's common and encoder
+# units with every SIMD variant (each compiles to a stub where its
+# instruction set is unavailable), utils, and sharpyuv.
+WEBP_OBJECTS = \
+	vendor/libwebp/src/enc/alpha_enc.o \
+	vendor/libwebp/src/enc/analysis_enc.o \
+	vendor/libwebp/src/enc/backward_references_cost_enc.o \
+	vendor/libwebp/src/enc/backward_references_enc.o \
+	vendor/libwebp/src/enc/config_enc.o \
+	vendor/libwebp/src/enc/cost_enc.o \
+	vendor/libwebp/src/enc/filter_enc.o \
+	vendor/libwebp/src/enc/frame_enc.o \
+	vendor/libwebp/src/enc/histogram_enc.o \
+	vendor/libwebp/src/enc/iterator_enc.o \
+	vendor/libwebp/src/enc/near_lossless_enc.o \
+	vendor/libwebp/src/enc/picture_csp_enc.o \
+	vendor/libwebp/src/enc/picture_enc.o \
+	vendor/libwebp/src/enc/picture_psnr_enc.o \
+	vendor/libwebp/src/enc/picture_rescale_enc.o \
+	vendor/libwebp/src/enc/picture_tools_enc.o \
+	vendor/libwebp/src/enc/predictor_enc.o \
+	vendor/libwebp/src/enc/quant_enc.o \
+	vendor/libwebp/src/enc/syntax_enc.o \
+	vendor/libwebp/src/enc/token_enc.o \
+	vendor/libwebp/src/enc/tree_enc.o \
+	vendor/libwebp/src/enc/vp8l_enc.o \
+	vendor/libwebp/src/enc/webp_enc.o \
+	vendor/libwebp/src/dsp/alpha_processing.o \
+	vendor/libwebp/src/dsp/cpu.o \
+	vendor/libwebp/src/dsp/dec.o \
+	vendor/libwebp/src/dsp/dec_clip_tables.o \
+	vendor/libwebp/src/dsp/filters.o \
+	vendor/libwebp/src/dsp/lossless.o \
+	vendor/libwebp/src/dsp/rescaler.o \
+	vendor/libwebp/src/dsp/upsampling.o \
+	vendor/libwebp/src/dsp/yuv.o \
+	vendor/libwebp/src/dsp/cost.o \
+	vendor/libwebp/src/dsp/enc.o \
+	vendor/libwebp/src/dsp/lossless_enc.o \
+	vendor/libwebp/src/dsp/ssim.o \
+	vendor/libwebp/src/dsp/alpha_processing_sse2.o \
+	vendor/libwebp/src/dsp/dec_sse2.o \
+	vendor/libwebp/src/dsp/filters_sse2.o \
+	vendor/libwebp/src/dsp/lossless_sse2.o \
+	vendor/libwebp/src/dsp/rescaler_sse2.o \
+	vendor/libwebp/src/dsp/upsampling_sse2.o \
+	vendor/libwebp/src/dsp/yuv_sse2.o \
+	vendor/libwebp/src/dsp/cost_sse2.o \
+	vendor/libwebp/src/dsp/enc_sse2.o \
+	vendor/libwebp/src/dsp/lossless_enc_sse2.o \
+	vendor/libwebp/src/dsp/ssim_sse2.o \
+	vendor/libwebp/src/dsp/alpha_processing_sse41.o \
+	vendor/libwebp/src/dsp/dec_sse41.o \
+	vendor/libwebp/src/dsp/lossless_sse41.o \
+	vendor/libwebp/src/dsp/upsampling_sse41.o \
+	vendor/libwebp/src/dsp/yuv_sse41.o \
+	vendor/libwebp/src/dsp/enc_sse41.o \
+	vendor/libwebp/src/dsp/lossless_enc_sse41.o \
+	vendor/libwebp/src/dsp/lossless_avx2.o \
+	vendor/libwebp/src/dsp/lossless_enc_avx2.o \
+	vendor/libwebp/src/dsp/alpha_processing_neon.o \
+	vendor/libwebp/src/dsp/dec_neon.o \
+	vendor/libwebp/src/dsp/filters_neon.o \
+	vendor/libwebp/src/dsp/lossless_neon.o \
+	vendor/libwebp/src/dsp/rescaler_neon.o \
+	vendor/libwebp/src/dsp/upsampling_neon.o \
+	vendor/libwebp/src/dsp/yuv_neon.o \
+	vendor/libwebp/src/dsp/cost_neon.o \
+	vendor/libwebp/src/dsp/enc_neon.o \
+	vendor/libwebp/src/dsp/lossless_enc_neon.o \
+	vendor/libwebp/src/dsp/dec_msa.o \
+	vendor/libwebp/src/dsp/filters_msa.o \
+	vendor/libwebp/src/dsp/lossless_msa.o \
+	vendor/libwebp/src/dsp/rescaler_msa.o \
+	vendor/libwebp/src/dsp/upsampling_msa.o \
+	vendor/libwebp/src/dsp/enc_msa.o \
+	vendor/libwebp/src/dsp/lossless_enc_msa.o \
+	vendor/libwebp/src/dsp/dec_mips32.o \
+	vendor/libwebp/src/dsp/rescaler_mips32.o \
+	vendor/libwebp/src/dsp/yuv_mips32.o \
+	vendor/libwebp/src/dsp/cost_mips32.o \
+	vendor/libwebp/src/dsp/enc_mips32.o \
+	vendor/libwebp/src/dsp/lossless_enc_mips32.o \
+	vendor/libwebp/src/dsp/alpha_processing_mips_dsp_r2.o \
+	vendor/libwebp/src/dsp/dec_mips_dsp_r2.o \
+	vendor/libwebp/src/dsp/filters_mips_dsp_r2.o \
+	vendor/libwebp/src/dsp/lossless_mips_dsp_r2.o \
+	vendor/libwebp/src/dsp/rescaler_mips_dsp_r2.o \
+	vendor/libwebp/src/dsp/upsampling_mips_dsp_r2.o \
+	vendor/libwebp/src/dsp/yuv_mips_dsp_r2.o \
+	vendor/libwebp/src/dsp/cost_mips_dsp_r2.o \
+	vendor/libwebp/src/dsp/enc_mips_dsp_r2.o \
+	vendor/libwebp/src/dsp/lossless_enc_mips_dsp_r2.o \
+	vendor/libwebp/src/utils/bit_reader_utils.o \
+	vendor/libwebp/src/utils/color_cache_utils.o \
+	vendor/libwebp/src/utils/filters_utils.o \
+	vendor/libwebp/src/utils/huffman_utils.o \
+	vendor/libwebp/src/utils/palette.o \
+	vendor/libwebp/src/utils/quant_levels_dec_utils.o \
+	vendor/libwebp/src/utils/rescaler_utils.o \
+	vendor/libwebp/src/utils/random_utils.o \
+	vendor/libwebp/src/utils/thread_utils.o \
+	vendor/libwebp/src/utils/utils.o \
+	vendor/libwebp/src/utils/bit_writer_utils.o \
+	vendor/libwebp/src/utils/huffman_encode_utils.o \
+	vendor/libwebp/src/utils/quant_levels_utils.o \
+	vendor/libwebp/sharpyuv/sharpyuv.o \
+	vendor/libwebp/sharpyuv/sharpyuv_cpu.o \
+	vendor/libwebp/sharpyuv/sharpyuv_csp.o \
+	vendor/libwebp/sharpyuv/sharpyuv_dsp.o \
+	vendor/libwebp/sharpyuv/sharpyuv_gamma.o \
+	vendor/libwebp/sharpyuv/sharpyuv_neon.o \
+	vendor/libwebp/sharpyuv/sharpyuv_sse2.o
+
+# zpx_wuffs.c and zpx_qoi.c compile the single-file Wuffs and qoi.h
+# implementations; nothing under vendor/wuffs or vendor/qoi is listed here.
+OBJECTS = \
+	zpx_init.o \
+	zpx_jpeg_error.o \
+	zpx_qoi.o \
+	zpx_r.o \
+	zpx_webp.o \
+	zpx_wuffs.o \
+	$(JPEG_OBJECTS) \
+	$(WEBP_OBJECTS)
