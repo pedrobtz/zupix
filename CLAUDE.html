@@ -132,11 +132,13 @@
 <li>
 <strong>Order independence.</strong> <code>devtools::test(shuffle = TRUE)</code> is part of the definition of done.</li>
 <li>
-<strong>Borrow a conformance suite before writing one.</strong> Mainstream implementations in Python, Java, Go or Node usually ship a test corpus. Use it as an oracle rather than inventing cases by hand. The design names PngSuite, libjpeg-turbo’s <code>testimages</code>, libwebp’s test files and the QOI test images, with <code>png</code>, <code>jpeg</code>, <code>webp</code> and <code>qoi</code> as differential oracles (design §9). Their licences are not yet read (Q6); files that may not be redistributed are downloaded in CI only.</li>
+<strong>Borrow a conformance suite before writing one.</strong> Mainstream implementations in Python, Java, Go or Node usually ship a test corpus. Use it as an oracle rather than inventing cases by hand. Here: PngSuite and libjpeg-turbo’s test images, committed under <code>tests/testthat/corpus/</code> by <code>tools/make-corpus.sh</code>; libwebp-test-data and the QOI test images, which may not be redistributed, downloaded by <code>hardening.yaml</code> and found through <code>ZUPIX_CORPUS</code>. Oracles: <code><a href="https://rdrr.io/pkg/png/man/readPNG.html" class="external-link">png::readPNG()</a></code> (exact on all of PngSuite), libjpeg-turbo’s <code>djpeg</code> (exact; the jpeg package bundles IJG libjpeg 9e, which upsamples chroma differently), <code><a href="https://jeroen.r-universe.dev/webp/reference/read_webp.html" class="external-link">webp::read_webp()</a></code> and <code>qoi.h</code>. Known Wuffs divergences are pinned in <code>test-conformance.R</code> so an upstream fix shows up there.</li>
 <li>
-<strong>Helpers live in <code>tests/testthat/helper-*.R</code>.</strong> None yet.</li>
+<strong>Helpers live in <code>tests/testthat/helper-*.R</code>.</strong> <code>helper-images.R</code> builds PNG and QOI byte by byte and splices metadata into files; <code>helper-corpus.R</code> finds the corpora and drives the hostile suite; <code>helper-abi.R</code> reads the shared object’s symbol tables. A function defined at file scope in a test file breaks <code>shuffle = TRUE</code>.</li>
 <li>
-<strong>Keep the suite inside the CRAN time budget.</strong> No suite yet.</li>
+<strong>Keep the suite inside the CRAN time budget.</strong> About 12 s locally. The expensive variants are opt-in: <code>ZUPIX_HOSTILE=full</code> (every corpus file cut at each of its first 4,096 offsets, about 2 minutes) and <code>ZUPIX_ROUNDTRIPS=10000</code>; <code>hardening.yaml</code> sets both.</li>
+<li>
+<strong>Fuzzing</strong> (<code>fuzz/</code>): <code>fuzz/replay.sh</code> replays every target’s seeds and regressions under ASan and UBSan without libFuzzer (works on macOS); <code>fuzz/build.sh</code> and <code>fuzz/run.sh</code> need a libFuzzer clang. A crash found in CI goes into <code>fuzz/corpus/regressions/&lt;target&gt;/</code> with its fix.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="definition-of-done">Definition of done<a class="anchor" aria-label="anchor" href="#definition-of-done"></a></h2>
