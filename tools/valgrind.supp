@@ -1,0 +1,34 @@
+# Valgrind suppressions for the valgrind job in native-checks.yaml.
+#
+# Two entries, neither zupix's: one is the qoi package's, one R's.
+#
+# The qoi package's: qoi 0.1.0's
+# qoiRead_() keeps the buffer qoi_decode() mallocs and never frees it. The
+# test suite calls qoi::readQOI() as a differential oracle for
+# pix_read() (test-shapes.R, "qoi::readQOI() agrees exactly"), which is what
+# provokes it.
+#
+# R's: do_memCompress() (src/main/connections.c) allocates a libdeflate
+# compressor and keeps it in a static for reuse, never freeing it; valgrind
+# sees only an interior pointer to it at exit, so it is "possibly lost".
+# The test helper make_png() (helper-images.R) builds PNGs with
+# memCompress(type = "gzip"), which is what provokes it.
+#
+# Each is matched on its whole call path, so a real leak from any other
+# caller, zupix's own code included, is still reported.
+{
+   qoi-0.1.0-qoiRead-never-frees-qoi_decode-buffer
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:qoi_decode
+   fun:qoiRead_
+}
+{
+   R-memCompress-keeps-its-libdeflate-compressor
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   fun:libdeflate_alloc_compressor_ex
+   fun:do_memCompress
+}

@@ -9,6 +9,8 @@
 static const R_CallMethodDef call_methods[] = {
   {"zpx_r_versions", (DL_FUNC) &zpx_r_versions, 0},
   {"zpx_r_wuffs_simd", (DL_FUNC) &zpx_r_wuffs_simd, 0},
+  {"zpx_r_sniff", (DL_FUNC) &zpx_r_sniff, 1},
+  {"zpx_r_read", (DL_FUNC) &zpx_r_read, 6},
   {NULL, NULL, 0}
 };
 

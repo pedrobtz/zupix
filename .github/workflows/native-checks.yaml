@@ -1,6 +1,6 @@
 # Native checks from pedrobtz/r-actions, copied from its examples/
-# native-checks.yml unchanged: quick on pull requests, full on main and on a
-# pull request labelled full-ci.
+# native-checks.yml: quick on pull requests, full on main and on a pull
+# request labelled full-ci. The only change is valgrind's suppressions.
 on:
   push:
     branches: [main, master]
@@ -27,6 +27,9 @@ jobs:
   valgrind:
     uses: pedrobtz/r-actions/.github/workflows/valgrind.yml@v1
     with:
+      # One third-party leak, in the qoi package the tests use as an oracle;
+      # see the file for why it is scoped as it is.
+      suppressions: tools/valgrind.supp
       profile: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-ci') && 'quick' || 'full' }}
 
   lto:
