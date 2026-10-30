@@ -56,6 +56,10 @@ typedef struct {
   int has_cicp;
   uint8_t cicp[4];       /* primaries, transfer, matrix, full range */
   int qoi_linear;        /* QOI colourspace byte: 1 linear, 0 sRGB */
+  /* A grey or RGB PNG's tRNS colour key, at the stored depth: Wuffs writes
+   * transparent black where it matches, so the decoder restores it. */
+  int has_trns_key;
+  uint16_t trns_key[3];
   /* ICC: PNG iCCP zlib stream (icc_compressed), WebP ICCP payload, or the
    * first JPEG APP2 segment's payload with icc_segments > 0. */
   size_t icc_off, icc_len;

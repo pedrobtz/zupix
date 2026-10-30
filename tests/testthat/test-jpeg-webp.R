@@ -92,10 +92,10 @@ test_that("an animated WebP whose first frame is not the canvas is unsupported",
 
 test_that("jpeg::readJPEG() agrees within the recorded tolerance", {
   skip_if_not_installed("jpeg")
-  # Grey is exact. Colour differs where chroma is upsampled, because Wuffs
-  # and libjpeg-turbo use different fancy-upsampling filters; on this 16 x 12
-  # image edges dominate. A 320 x 240 image measured 99.9% of samples within
-  # 2 levels, the worst 4 (roadmap, Stage 3).
+  # Grey is exact. Colour differs where chroma is upsampled, because the
+  # jpeg package bundles IJG libjpeg 9e, whose upsampling differs from
+  # libjpeg-turbo's (Wuffs matches libjpeg-turbo exactly: see the djpeg test
+  # in test-conformance.R). On this 16 x 12 image edges dominate.
   tolerance <- c("grey.jpg" = 0, "rgb.jpg" = 9)
   for (name in names(tolerance)) {
     f <- test_path("fixtures", name)

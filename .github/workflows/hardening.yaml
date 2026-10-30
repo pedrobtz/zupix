@@ -2,8 +2,10 @@
 # counts once it has been seen to fail, so every run also proves it can
 # still see what it guards against. See .agents/roadmap.md.
 #
-# Stage 1: the compiled-code gate (tools/check-symbols). Later stages add
-# the hostile-input suites and fuzzing.
+# The compiled-code gate (tools/check-symbols, Stage 1); the conformance
+# corpora that may not be committed, the full hostile-input suite and 10^4
+# round trips (Stage 7); and the fuzz targets' canary and replay (Stage 7;
+# the fuzzing itself is fuzz.yaml).
 on:
   push:
     branches: [main, master]
@@ -42,3 +44,56 @@ jobs:
         run: ./tools/check-symbols
       - name: canary - a shared object that breaks both rules must fail
         run: ./tools/check-symbols --canary
+
+  corpus:
+    runs-on: ubuntu-latest
+    name: corpora, the full hostile suite and 10^4 round trips
+    steps:
+      - uses: actions/checkout@v6
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::devtools
+          needs: check
+      - name: djpeg, libjpeg-turbo's decoder, for the exact JPEG differential
+        run: sudo apt-get install -y libjpeg-turbo-progs
+      - name: fetch the corpora that carry no redistribution licence (pinned)
+        run: |
+          set -eu
+          mkdir -p corpus
+          git clone -q https://github.com/webmproject/libwebp-test-data.git corpus/libwebp-test-data
+          git -C corpus/libwebp-test-data checkout -q 06ddd96e276c2c638a72d39d3c0f340afd61978c
+          curl -fsSL --retry 3 -o qoi.zip https://qoiformat.org/qoi_test_images.zip
+          echo "bd557fb208222478d9eefcae59fb473d10e047fd7a8885fcff48861f86599165  qoi.zip" | sha256sum -c -
+          unzip -q qoi.zip -d corpus
+      - name: conformance against every corpus, hostile input in full, 10^4 round trips
+        env:
+          ZUPIX_CORPUS: ${{ github.workspace }}/corpus
+          ZUPIX_HOSTILE: full
+          ZUPIX_ROUNDTRIPS: "10000"
+        run: |
+          Rscript -e 'res <- as.data.frame(devtools::test(filter = "conformance|hostile|write", reporter = "summary", stop_on_failure = FALSE)); if (sum(res$skipped) > 0) print(res[res$skipped, c("file", "test")]); quit(status = as.integer(any(res$failed > 0 | res$error)))'
+
+  fuzz-harness:
+    runs-on: ubuntu-latest
+    name: fuzz seeds and regressions replay; the canary crashes
+    steps:
+      - uses: actions/checkout@v6
+      - name: replay every target's seeds and regressions under ASan and UBSan
+        run: CC=clang ./fuzz/replay.sh
+      - name: canary - the deliberately broken target must crash under libFuzzer
+        run: |
+          set -eu
+          . fuzz/targets.sh
+          mkdir -p fuzz/build/corpus/fuzz_canary
+          clang $FUZZ_CFLAGS -fsanitize=fuzzer,address,undefined \
+            fuzz/fuzz_canary.c $(sources_for fuzz_canary) -lz -o fuzz/build/fuzz_canary
+          if ./fuzz/build/fuzz_canary -runs=2000000 -seed=1 \
+               -artifact_prefix=fuzz/build/fuzz_canary- \
+               fuzz/build/corpus/fuzz_canary fuzz/corpus/seed/fuzz_canary >/dev/null 2>&1; then
+            echo "::error::the canary did not crash: the fuzz harness would miss a crash"
+            exit 1
+          fi
+          echo "ok  canary crashed"

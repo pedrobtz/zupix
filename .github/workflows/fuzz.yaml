@@ -1,0 +1,63 @@
+# Coverage-guided fuzzing of the R-free core (design §9), one job per target
+# through pedrobtz/r-actions' fuzz.yml: 60 s each on a pull request, 10
+# minutes each nightly or on a pull request labelled fuzz-long. The corpus is
+# cached between runs, so short and long runs add up to one campaign. A
+# finding fails the job and uploads the input; add it to
+# fuzz/corpus/regressions/<target>/ with the fix. The canary and the replay
+# of seeds and regressions run in hardening.yaml.
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '**.md'
+      - '_pkgdown.yml'
+      - '.agents/**'
+      - 'docs/**'
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths-ignore:
+      - '**.md'
+      - '_pkgdown.yml'
+      - '.agents/**'
+      - 'docs/**'
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+name: fuzz
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  fuzz:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [fuzz_decode_png, fuzz_decode_jpeg, fuzz_decode_webp,
+                 fuzz_decode_qoi, fuzz_probe, fuzz_exif, fuzz_jpeg_icc]
+    uses: pedrobtz/r-actions/.github/workflows/fuzz.yml@v1
+    with:
+      harness: fuzz/${{ matrix.target }}.c
+      sources: src/zpx_decode.c src/zpx_scan.c src/zpx_sniff.c src/zpx_wuffs.c fuzz/fuzz_common.c
+      # zlib is the one library linked; fuzz.yml takes no linker flags, so it
+      # rides in cflags, kept by --no-as-needed although it precedes the
+      # objects that need it.
+      cflags: -g -O1 -fno-omit-frame-pointer -Iinst/include -Isrc -Ifuzz -Wl,--no-as-needed -lz
+      seed-corpus: fuzz/corpus/seed/${{ matrix.target }}
+      dictionary: fuzz/zupix.dict
+      max-total-time: ${{ (github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'fuzz-long')) && 600 || 60 }}
+      timeout-minutes: ${{ (github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'fuzz-long')) && 25 || 15 }}
+
+  roundtrip:
+    uses: pedrobtz/r-actions/.github/workflows/fuzz.yml@v1
+    with:
+      harness: fuzz/fuzz_roundtrip.c
+      sources: src/zpx_decode.c src/zpx_scan.c src/zpx_sniff.c src/zpx_wuffs.c src/zpx_png_write.c src/zpx_sink.c src/zpx_qoi.c fuzz/fuzz_common.c
+      cflags: -g -O1 -fno-omit-frame-pointer -Iinst/include -Isrc -Ifuzz -Wl,--no-as-needed -lz
+      seed-corpus: fuzz/corpus/seed/fuzz_roundtrip
+      max-total-time: ${{ (github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'fuzz-long')) && 600 || 60 }}
+      timeout-minutes: ${{ (github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'fuzz-long')) && 25 || 15 }}

@@ -221,6 +221,46 @@ static zpx_status probe(const uint8_t *buf, size_t len,
   return ZPX_OK;
 }
 
+/* Where a grey or RGB PNG's tRNS key matched, Wuffs writes transparent
+ * black; the file holds the key colour there, which is what is returned
+ * (design §1: the pixels the file holds). Alpha is 0 exactly where the key
+ * matched, since these colour types have no other transparency. Sub-8-bit
+ * keys are scaled by bit replication, as the samples are. */
+static void restore_trns_key(const zpx_meta *m, zpx_pixfmt pixfmt,
+                             uint8_t *dst, size_t stride, uint32_t w,
+                             uint32_t h) {
+  unsigned key[3];
+  for (int k = 0; k < 3; k++) {
+    unsigned v = m->trns_key[m->colour_type == ZPX_CT_GREY ? 0 : k];
+    if (m->bits < 8) v *= 255u / ((1u << m->bits) - 1u);
+    key[k] = v;
+  }
+  for (uint32_t y = 0; y < h; y++) {
+    uint8_t *row = dst + (size_t) y * stride;
+    for (uint32_t x = 0; x < w; x++) {
+      if (pixfmt == ZPX_PIX_RGBA8) {
+        uint8_t *px = row + 4 * (size_t) x;
+        if (px[3] != 0) continue;
+        /* An 8-bit view of a 16-bit file never reaches here: 16-bit
+         * sources decode to RGBA16 first. */
+        for (int k = 0; k < 3; k++) px[k] = (uint8_t) key[k];
+      } else {
+        /* Wuffs's BGRA, 16-bit little-endian. */
+        uint8_t *px = row + 8 * (size_t) x;
+        static const int at[3] = {4, 2, 0}; /* R, G, B byte offsets */
+        unsigned v[3];
+        if (px[6] != 0 || px[7] != 0) continue;
+        for (int k = 0; k < 3; k++)
+          v[k] = m->bits == 16 ? key[k] : key[k] * 257u;
+        for (int k = 0; k < 3; k++) {
+          px[at[k]] = (uint8_t) v[k];
+          px[at[k] + 1] = (uint8_t) (v[k] >> 8);
+        }
+      }
+    }
+  }
+}
+
 zpx_status zpx_int_probe_image(const uint8_t *buf, size_t len,
                                const zpx_limits *limits, zpx_int_probe *out) {
   zpx_decoder d;
@@ -303,6 +343,8 @@ zpx_status zpx_int_decode_image(const uint8_t *buf, size_t len,
     s = wuffs_failure(&st);
     goto done;
   }
+  if (out->meta.has_trns_key) restore_trns_key(&out->meta, pixfmt, dst, stride,
+                                               out->width, out->height);
   s = ZPX_OK;
 
 done:
