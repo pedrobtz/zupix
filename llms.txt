@@ -40,6 +40,10 @@ library(zupix)
   : Apply an EXIF orientation
 - [`pix_read()`](https://pedrobtz.github.io/zupix/reference/pix_read.md)
   : Read an image
+- [`pix_write()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  [`pix_write_png()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  [`pix_write_qoi()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  : Write an image
 - [`zupix-conditions`](https://pedrobtz.github.io/zupix/reference/zupix-conditions.md)
   : Conditions raised by zupix
 - [`zupix_info()`](https://pedrobtz.github.io/zupix/reference/zupix_info.md)

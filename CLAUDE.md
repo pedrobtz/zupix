@@ -134,6 +134,11 @@ Growing as stages land; `.agents/design.md` §4 plans the layers.
   allocate (R vectors only, so an R error leaks nothing), then decode.
   Array outputs go through a row-major RGBA intermediate that is counted
   in `max_bytes`; an 8-bit `nativeRaster` decodes in place.
+- Encoders write to a `zpx_write_fn` sink. From R the sink is a growable
+  `malloc` buffer (`zpx_sink.c`), copied into a raw vector under
+  `R_ExecWithCleanup()`, which frees the buffer even if that allocation
+  raises an R error. Keep that pattern for any C-owned memory that must
+  outlive a call into R.
 
 ## Invariants that are easy to break
 

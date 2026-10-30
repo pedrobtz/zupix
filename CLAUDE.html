@@ -99,6 +99,7 @@
 <li>
 <code>src/zpx_r.c</code> is the only R-aware C; <code>src/zpx_init.c</code> registers it. It returns pixels or a <code>zupix_failure</code> list, and <code>R/conditions.R</code> turns the failure into the classed condition, so no C code raises an R error.</li>
 <li>Decoding is two-phase: probe (header, limits on declared sizes), then allocate (R vectors only, so an R error leaks nothing), then decode. Array outputs go through a row-major RGBA intermediate that is counted in <code>max_bytes</code>; an 8-bit <code>nativeRaster</code> decodes in place.</li>
+<li>Encoders write to a <code>zpx_write_fn</code> sink. From R the sink is a growable <code>malloc</code> buffer (<code>zpx_sink.c</code>), copied into a raw vector under <code>R_ExecWithCleanup()</code>, which frees the buffer even if that allocation raises an R error. Keep that pattern for any C-owned memory that must outlive a call into R.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="invariants-that-are-easy-to-break">Invariants that are easy to break<a class="anchor" aria-label="anchor" href="#invariants-that-are-easy-to-break"></a></h2>

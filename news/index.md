@@ -25,6 +25,16 @@
   [`pix_exif()`](https://pedrobtz.github.io/zupix/reference/pix_icc.md)
   return the raw ICC profile and EXIF block.
 
+- [`pix_write()`](https://pedrobtz.github.io/zupix/reference/pix_write.md),
+  [`pix_write_png()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  and
+  [`pix_write_qoi()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  encode the shapes
+  [`pix_read()`](https://pedrobtz.github.io/zupix/reference/pix_read.md)
+  returns, to a file or a raw vector. PNG is zupix’s own writer over
+  zlib, at 8 or 16 bits with 1 to 4 channels, an optional ICC profile,
+  EXIF block or sRGB intent; QOI uses the reference encoder.
+
 - [`pix_orient()`](https://pedrobtz.github.io/zupix/reference/pix_orient.md)
   applies an EXIF orientation losslessly; `pix_read(orient = TRUE)` does
   so while reading. Pixels come back as stored by default.
