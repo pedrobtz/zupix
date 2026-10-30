@@ -3,7 +3,7 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/pedrobtz/zupix/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pedrobtz/zupix/actions/workflows/R-CMD-check.yaml)
-[![coverage](https://raw.githubusercontent.com/pedrobtz/zupix/main/.github/badges/coverage.svg)](https://github.com/pedrobtz/zupix/actions/workflows/coverage.yaml)
+[![coverage](https://raw.githubusercontent.com/pedrobtz/zupix/gh-pages/badges/coverage.svg)](https://github.com/pedrobtz/zupix/actions/workflows/coverage.yaml)
 <!-- badges: end -->
 
 The goal of zupix is to ...

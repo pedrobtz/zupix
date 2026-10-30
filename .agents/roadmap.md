@@ -16,7 +16,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
-| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupix/issues/2) | | |
+| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupix/issues/2) | | 2026-10-30 |
 | 1 | [Vendored codecs and the Wuffs gate](#stage-1--vendored-codecs-and-the-wuffs-gate) | full | [#3](https://github.com/pedrobtz/zupix/issues/3) | | |
 | 2 | [Decoding PNG and QOI](#stage-2--decoding-png-and-qoi) | full | [#4](https://github.com/pedrobtz/zupix/issues/4) | | |
 | 3 | [JPEG, WebP and metadata](#stage-3--jpeg-webp-and-metadata) | full | [#5](https://github.com/pedrobtz/zupix/issues/5) | | |

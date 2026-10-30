@@ -22,3 +22,14 @@ jobs:
       # Quick on each push to a pull request, full after merge. The
       # `full-ci` label runs the full set on a pull request before merging.
       profile: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-ci') && 'quick' || 'full' }}
+      # The default four legs plus Windows on R-devel. The containers cover
+      # R-devel on Linux; nothing else reaches the combination CRAN's own
+      # Windows R-devel check runs, which win-builder would have caught. The
+      # runners run in the full profile only, so quick pull requests pay
+      # nothing for the extra leg.
+      runners: >-
+        [{"os": "macos-latest", "r": "release"},
+         {"os": "windows-latest", "r": "release"},
+         {"os": "windows-latest", "r": "devel"},
+         {"os": "ubuntu-latest", "r": "release"},
+         {"os": "ubuntu-latest", "r": "oldrel-1"}]
