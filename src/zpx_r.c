@@ -4,6 +4,7 @@
 #include <R.h>
 #include <Rinternals.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <zlib.h>
 
 #include "zpx_int.h"
@@ -351,4 +352,97 @@ SEXP zpx_r_exif(SEXP x, SEXP limits_) {
   out = Rf_allocVector(RAWSXP, (R_xlen_t) m.exif_len);
   memcpy(RAW(out), RAW(x) + m.exif_off, m.exif_len);
   return out;
+}
+
+/* ---- encoding ---------------------------------------------------------- */
+
+static SEXP copy_buffer(void *data) {
+  zpx_buffer *b = (zpx_buffer *) data;
+  SEXP out = Rf_allocVector(RAWSXP, (R_xlen_t) b->len);
+  if (b->len > 0) memcpy(RAW(out), b->data, b->len);
+  return out;
+}
+
+static void free_buffer(void *data) {
+  zpx_buffer *b = (zpx_buffer *) data;
+  free(b->data);
+  b->data = NULL;
+}
+
+/* format: 1 PNG, 4 QOI (zpx_format). `pixels` is either a nativeRaster's
+ * integers (native TRUE) or an integer vector holding a column-major
+ * height x width x channels array whose values R has checked are within
+ * 0..2^bits - 1. opts: list(compression, icc, exif, srgb, colourspace).
+ * Returns the encoded file as a raw vector, or a zupix_failure. */
+SEXP zpx_r_encode(SEXP pixels, SEXP native_, SEXP dims_, SEXP bits_,
+                  SEXP format_, SEXP opts_) {
+  int native = Rf_asLogical(native_);
+  int h = INTEGER(dims_)[0], w = INTEGER(dims_)[1], c = INTEGER(dims_)[2];
+  int bits = Rf_asInteger(bits_), format = Rf_asInteger(format_);
+  int out_c = c, bytes = bits / 8;
+  size_t pixels_n = (size_t) h * (size_t) w;
+  const char *detail = NULL;
+  zpx_buffer buf = {NULL, 0, 0};
+  zpx_status s;
+  SEXP inter;
+  uint8_t *dst;
+
+  /* QOI stores only RGB or RGBA: grey widens without loss. */
+  if (format == ZPX_FMT_QOI && c < 3) out_c = c + 2;
+  inter = PROTECT(Rf_allocVector(RAWSXP,
+                                 (R_xlen_t) (pixels_n * out_c * bytes)));
+  dst = RAW(inter);
+
+  if (native) {
+    const int *src = INTEGER(pixels);
+    for (size_t i = 0; i < pixels_n; i++) {
+      unsigned v = (unsigned) src[i];
+      for (int k = 0; k < 4; k++) dst[4 * i + k] = (uint8_t) (v >> (8 * k));
+    }
+  } else {
+    const int *src = INTEGER(pixels);
+    for (int ch = 0; ch < out_c; ch++) {
+      /* Unwidened, each channel is its own. Widened grey: R, G and B all
+       * take the grey channel, and alpha keeps its own. */
+      int from = out_c == c ? ch : (ch < 3 ? 0 : 1);
+      for (size_t x = 0; x < (size_t) w; x++) {
+        for (size_t y = 0; y < (size_t) h; y++) {
+          int v = src[y + x * (size_t) h + (size_t) from * pixels_n];
+          size_t at = (y * (size_t) w + x) * out_c + ch;
+          if (bytes == 1) {
+            dst[at] = (uint8_t) v;
+          } else {
+            uint16_t u = (uint16_t) v;
+            memcpy(dst + 2 * at, &u, 2);
+          }
+        }
+      }
+    }
+  }
+
+  if (format == ZPX_FMT_PNG) {
+    SEXP icc = VECTOR_ELT(opts_, 1), exif = VECTOR_ELT(opts_, 2);
+    zpx_png_opts o;
+    o.struct_size = (uint32_t) sizeof o;
+    o.compression = Rf_asInteger(VECTOR_ELT(opts_, 0));
+    o.icc = Rf_isNull(icc) ? NULL : RAW(icc);
+    o.icc_len = Rf_isNull(icc) ? 0 : (size_t) XLENGTH(icc);
+    o.exif = Rf_isNull(exif) ? NULL : RAW(exif);
+    o.exif_len = Rf_isNull(exif) ? 0 : (size_t) XLENGTH(exif);
+    o.srgb = Rf_asInteger(VECTOR_ELT(opts_, 3));
+    s = zpx_int_encode_png(dst, (uint32_t) w, (uint32_t) h, out_c, bits, &o,
+                           zpx_int_buffer_write, &buf, &detail);
+  } else {
+    s = zpx_int_encode_qoi(dst, (uint32_t) w, (uint32_t) h, out_c,
+                           Rf_asInteger(VECTOR_ELT(opts_, 4)),
+                           zpx_int_buffer_write, &buf, &detail);
+  }
+  UNPROTECT(1);
+  if (s != ZPX_OK) {
+    free(buf.data);
+    return failure(s, detail, ZPX_LIMIT_NONE, 0, 0);
+  }
+  /* The encoded bytes are malloc'd; R_ExecWithCleanup frees them even if
+   * allocating the R vector raises an error. */
+  return R_ExecWithCleanup(copy_buffer, &buf, free_buffer, &buf);
 }

@@ -14,6 +14,7 @@ static const R_CallMethodDef call_methods[] = {
   {"zpx_r_info", (DL_FUNC) &zpx_r_info, 2},
   {"zpx_r_icc", (DL_FUNC) &zpx_r_icc, 2},
   {"zpx_r_exif", (DL_FUNC) &zpx_r_exif, 2},
+  {"zpx_r_encode", (DL_FUNC) &zpx_r_encode, 6},
   {NULL, NULL, 0}
 };
 
