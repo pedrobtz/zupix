@@ -1,0 +1,18 @@
+# Valgrind suppressions for the valgrind job in native-checks.yaml.
+#
+# One entry, and the leak is the qoi package's, not zupix's. qoi 0.1.0's
+# qoiRead_() keeps the buffer qoi_decode() mallocs and never frees it. The
+# test suite calls qoi::readQOI() as a differential oracle for
+# pix_read() (test-shapes.R, "qoi::readQOI() agrees exactly"), which is what
+# provokes it.
+#
+# Matched on the whole call path, so a real leak from any other caller,
+# zupix's own code included, is still reported.
+{
+   qoi-0.1.0-qoiRead-never-frees-qoi_decode-buffer
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:qoi_decode
+   fun:qoiRead_
+}

@@ -165,7 +165,12 @@ counted in `max_bytes`, and an 8-bit `nativeRaster` still decodes in
 place. (3) JPEG and WebP are sniffed but raise `zupix_unsupported_error`
 until Stage 3. (4) Q5 is settled by D8: no warning for QOI's `linear`
 colourspace. (5) The `qoi` differential test reads from a file, because
-qoi 0.1.0's `readQOI()` crashes R on a raw vector. `x` also accepts URLs,
+qoi 0.1.0's `readQOI()` crashes R on a raw vector, and it leaks the buffer
+it decodes into: `tools/valgrind.supp` suppresses exactly that call path
+for the valgrind job. (6) The first full run's UBSan leg flagged Wuffs's
+generic `wuffs_base__image_decoder` interface (`-fsanitize=function`: it
+calls each decoder through a `void *`-self pointer), so zupix calls the
+PNG and QOI decoders' functions directly. `x` also accepts URLs,
 through the family's shared `R/zu_source.R`, copied verbatim from zuxml.
 
 **Exit criteria.**
