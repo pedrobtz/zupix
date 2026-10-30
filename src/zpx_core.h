@@ -95,11 +95,17 @@ typedef struct {
   size_t icc_off, icc_len;
   int icc_compressed, icc_segments;
   size_t exif_off, exif_len; /* the TIFF header onward */
-  /* Animated WebP: the first frame, as a still WebP built in the caller's
-   * buffer by zpx_int_webp_first_frame(). */
+  /* Animated WebP's first frame, or an extended still WebP's VP8L chunk
+   * (webp_rebuild): what zpx_int_webp_first_frame() rebuilds as a still. */
   size_t frame_off, frame_len;
   uint32_t frame_x, frame_y, frame_w, frame_h;
   int frame_alph;
+  /* A still extended WebP (VP8X) whose bitstream is VP8L. Wuffs
+   * v0.4.0-alpha.12 fails on every such file ("bad color cache", or "bad
+   * ALPH+VP8L combination" with the alpha flag set) though the same VP8L
+   * chunk decodes as a simple file, so the decoder rebuilds one from the
+   * frame fields, which then name the VP8L chunk. */
+  int webp_rebuild;
 } zpx_meta;
 
 /* What probing an image found, and why it failed when it did. `detail` is
@@ -182,6 +188,42 @@ zpx_status zpx_int_encode_png(const uint8_t *src, uint32_t width,
                               uint32_t height, int channels, int bits,
                               const zpx_png_opts *opts, zpx_write_fn write,
                               void *closure, const char **detail);
+
+/* JPEG options (design §5). subsampling: 0 4:4:4, 1 4:2:2, 2 4:2:0. */
+typedef struct {
+  uint32_t struct_size;
+  int quality; /* 1..100, libjpeg's scale */
+  int subsampling;
+  int progressive;
+  const uint8_t *icc;
+  size_t icc_len;
+  const uint8_t *exif;
+  size_t exif_len;
+} zpx_jpeg_opts;
+
+/* Grey (1 channel) or RGB (3) bytes. */
+zpx_status zpx_int_encode_jpeg(const uint8_t *src, uint32_t width,
+                               uint32_t height, int channels,
+                               const zpx_jpeg_opts *opts, zpx_write_fn write,
+                               void *closure, const char **detail);
+
+/* WebP options (design §5). */
+typedef struct {
+  uint32_t struct_size;
+  float quality; /* 0..100 */
+  int lossless;
+  int method;    /* 0..6 */
+  const uint8_t *icc;
+  size_t icc_len;
+  const uint8_t *exif;
+  size_t exif_len;
+} zpx_webp_opts;
+
+/* RGB (3) or RGBA (4) bytes. */
+zpx_status zpx_int_encode_webp(const uint8_t *src, uint32_t width,
+                               uint32_t height, int channels,
+                               const zpx_webp_opts *opts, zpx_write_fn write,
+                               void *closure, const char **detail);
 
 /* RGB or RGBA bytes; colourspace 0 sRGB, 1 linear. */
 zpx_status zpx_int_encode_qoi(const uint8_t *src, uint32_t width,

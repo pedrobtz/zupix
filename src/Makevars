@@ -188,6 +188,7 @@ OBJECTS = \
 	zpx_decode.o \
 	zpx_init.o \
 	zpx_jpeg_error.o \
+	zpx_jpeg_write.o \
 	zpx_png_write.o \
 	zpx_qoi.o \
 	zpx_r.o \

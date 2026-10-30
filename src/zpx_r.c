@@ -369,11 +369,13 @@ static void free_buffer(void *data) {
   b->data = NULL;
 }
 
-/* format: 1 PNG, 4 QOI (zpx_format). `pixels` is either a nativeRaster's
- * integers (native TRUE) or an integer vector holding a column-major
+/* format: a zpx_format. `pixels` is either a nativeRaster's integers
+ * (native TRUE) or an integer vector holding a column-major
  * height x width x channels array whose values R has checked are within
- * 0..2^bits - 1. opts: list(compression, icc, exif, srgb, colourspace).
- * Returns the encoded file as a raw vector, or a zupix_failure. */
+ * 0..2^bits - 1 (bits is 8 for JPEG, WebP and QOI). opts: list(compression,
+ * icc, exif, srgb, colourspace, quality, subsampling, progressive,
+ * lossless, method). Returns the encoded file as a raw vector, or a
+ * zupix_failure. */
 SEXP zpx_r_encode(SEXP pixels, SEXP native_, SEXP dims_, SEXP bits_,
                   SEXP format_, SEXP opts_) {
   int native = Rf_asLogical(native_);
@@ -387,8 +389,24 @@ SEXP zpx_r_encode(SEXP pixels, SEXP native_, SEXP dims_, SEXP bits_,
   SEXP inter;
   uint8_t *dst;
 
-  /* QOI stores only RGB or RGBA: grey widens without loss. */
-  if (format == ZPX_FMT_QOI && c < 3) out_c = c + 2;
+  /* QOI and WebP store only RGB or RGBA: grey widens without loss. JPEG
+   * stores no alpha: an alpha channel that is entirely opaque is dropped,
+   * and any transparency is refused, because flattening it onto a
+   * background is a colour decision (design D10). */
+  if ((format == ZPX_FMT_QOI || format == ZPX_FMT_WEBP) && c < 3)
+    out_c = c + 2;
+  if (format == ZPX_FMT_JPEG && (c == 2 || c == 4)) {
+    const int *src = INTEGER(pixels);
+    for (size_t i = 0; i < pixels_n; i++) {
+      unsigned a = native ? ((unsigned) src[i] >> 24)
+                          : (unsigned) src[i + (size_t) (c - 1) * pixels_n];
+      if (a != 255u)
+        return failure(ZPX_ERR_ARGUMENT,
+                       "`x` has transparent pixels, which JPEG cannot store",
+                       ZPX_LIMIT_NONE, 0, 0);
+    }
+    out_c = c - 1;
+  }
   inter = PROTECT(Rf_allocVector(RAWSXP,
                                  (R_xlen_t) (pixels_n * out_c * bytes)));
   dst = RAW(inter);
@@ -397,14 +415,16 @@ SEXP zpx_r_encode(SEXP pixels, SEXP native_, SEXP dims_, SEXP bits_,
     const int *src = INTEGER(pixels);
     for (size_t i = 0; i < pixels_n; i++) {
       unsigned v = (unsigned) src[i];
-      for (int k = 0; k < 4; k++) dst[4 * i + k] = (uint8_t) (v >> (8 * k));
+      for (int k = 0; k < out_c; k++)
+        dst[(size_t) out_c * i + k] = (uint8_t) (v >> (8 * k));
     }
   } else {
     const int *src = INTEGER(pixels);
     for (int ch = 0; ch < out_c; ch++) {
-      /* Unwidened, each channel is its own. Widened grey: R, G and B all
-       * take the grey channel, and alpha keeps its own. */
-      int from = out_c == c ? ch : (ch < 3 ? 0 : 1);
+      /* Unchanged or narrowed (JPEG's opaque alpha dropped), each channel
+       * is its own. Widened grey: R, G and B all take the grey channel, and
+       * alpha keeps its own. */
+      int from = out_c <= c ? ch : (ch < 3 ? 0 : 1);
       for (size_t x = 0; x < (size_t) w; x++) {
         for (size_t y = 0; y < (size_t) h; y++) {
           int v = src[y + x * (size_t) h + (size_t) from * pixels_n];
@@ -432,6 +452,32 @@ SEXP zpx_r_encode(SEXP pixels, SEXP native_, SEXP dims_, SEXP bits_,
     o.srgb = Rf_asInteger(VECTOR_ELT(opts_, 3));
     s = zpx_int_encode_png(dst, (uint32_t) w, (uint32_t) h, out_c, bits, &o,
                            zpx_int_buffer_write, &buf, &detail);
+  } else if (format == ZPX_FMT_JPEG) {
+    SEXP icc = VECTOR_ELT(opts_, 1), exif = VECTOR_ELT(opts_, 2);
+    zpx_jpeg_opts o;
+    o.struct_size = (uint32_t) sizeof o;
+    o.quality = Rf_asInteger(VECTOR_ELT(opts_, 5));
+    o.subsampling = Rf_asInteger(VECTOR_ELT(opts_, 6));
+    o.progressive = Rf_asLogical(VECTOR_ELT(opts_, 7));
+    o.icc = Rf_isNull(icc) ? NULL : RAW(icc);
+    o.icc_len = Rf_isNull(icc) ? 0 : (size_t) XLENGTH(icc);
+    o.exif = Rf_isNull(exif) ? NULL : RAW(exif);
+    o.exif_len = Rf_isNull(exif) ? 0 : (size_t) XLENGTH(exif);
+    s = zpx_int_encode_jpeg(dst, (uint32_t) w, (uint32_t) h, out_c, &o,
+                            zpx_int_buffer_write, &buf, &detail);
+  } else if (format == ZPX_FMT_WEBP) {
+    SEXP icc = VECTOR_ELT(opts_, 1), exif = VECTOR_ELT(opts_, 2);
+    zpx_webp_opts o;
+    o.struct_size = (uint32_t) sizeof o;
+    o.quality = (float) Rf_asReal(VECTOR_ELT(opts_, 5));
+    o.lossless = Rf_asLogical(VECTOR_ELT(opts_, 8));
+    o.method = Rf_asInteger(VECTOR_ELT(opts_, 9));
+    o.icc = Rf_isNull(icc) ? NULL : RAW(icc);
+    o.icc_len = Rf_isNull(icc) ? 0 : (size_t) XLENGTH(icc);
+    o.exif = Rf_isNull(exif) ? NULL : RAW(exif);
+    o.exif_len = Rf_isNull(exif) ? 0 : (size_t) XLENGTH(exif);
+    s = zpx_int_encode_webp(dst, (uint32_t) w, (uint32_t) h, out_c, &o,
+                            zpx_int_buffer_write, &buf, &detail);
   } else {
     s = zpx_int_encode_qoi(dst, (uint32_t) w, (uint32_t) h, out_c,
                            Rf_asInteger(VECTOR_ELT(opts_, 4)),
