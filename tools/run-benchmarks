@@ -1,0 +1,116 @@
+#!/usr/bin/env Rscript
+# Design §10's benchmarks, written to .agents/benchmarks.md.
+#
+#   tools/run-benchmarks            the baseline: png, jpeg and webp on a
+#                                   12-megapixel synthetic photograph
+#
+# qoi is left out: qoi 0.1.0's writeQOI() overflows the C stack on a
+# 12-megapixel image (seen 2026-10-30), and design §10 sets no QOI target.
+#
+# Until zupix decodes and encodes (Stages 2 to 5) this records only the
+# baseline zupix's targets are measured against. The image is synthetic and
+# seeded, so every run measures the same pixels: smooth gradients, a few
+# soft shapes and sensor-like noise, which compresses like a photograph
+# rather than like flat colour or pure noise.
+suppressPackageStartupMessages({
+  for (p in c("bench", "png", "jpeg", "webp")) {
+    if (!requireNamespace(p, quietly = TRUE)) stop("needs package ", p)
+  }
+})
+
+photograph <- function(width = 4000L, height = 3000L, seed = 20261030L) {
+  set.seed(seed)
+  x <- rep(seq(0, 1, length.out = width), each = height)
+  y <- rep(seq(0, 1, length.out = height), times = width)
+  base <- list(
+    0.55 + 0.35 * sin(3 * x + 2 * y),
+    0.45 + 0.30 * cos(4 * y - x),
+    0.40 + 0.25 * sin(5 * x * y + 1)
+  )
+  blob <- exp(-((x - 0.6)^2 + (y - 0.4)^2) / 0.02)
+  img <- array(0, c(height, width, 3L))
+  for (k in 1:3) {
+    v <- base[[k]] + 0.3 * blob * (k == 1) + stats::rnorm(width * height, 0, 0.02)
+    img[, , k] <- pmin(pmax(v, 0), 1)
+  }
+  img
+}
+
+img <- photograph()
+dir <- tempfile("zupix-bench")
+dir.create(dir)
+files <- c(
+  png = file.path(dir, "p.png"),
+  jpeg = file.path(dir, "p.jpg"),
+  webp = file.path(dir, "p.webp")
+)
+png::writePNG(img, files[["png"]])
+jpeg::writeJPEG(img, files[["jpeg"]], quality = 0.9)
+webp::write_webp(img, files[["webp"]], quality = 75)
+
+run <- function(...) {
+  b <- bench::mark(..., min_iterations = 5, check = FALSE, filter_gc = FALSE)
+  data.frame(
+    operation = names(list(...)),
+    median_s = round(as.numeric(b$median), 3),
+    mem_mb = round(as.numeric(b$mem_alloc) / 2^20, 1)
+  )
+}
+
+decode <- run(
+  "png::readPNG(native = TRUE)" = png::readPNG(files[["png"]], native = TRUE),
+  "jpeg::readJPEG(native = TRUE)" = jpeg::readJPEG(files[["jpeg"]], native = TRUE),
+  "webp::read_webp()" = webp::read_webp(files[["webp"]])
+)
+encode <- run(
+  "png::writePNG()" = png::writePNG(img),
+  "jpeg::writeJPEG(quality = 0.9)" = jpeg::writeJPEG(img, quality = 0.9),
+  "webp::write_webp(quality = 75)" = webp::write_webp(img, quality = 75)
+)
+sizes <- data.frame(
+  format = names(files),
+  bytes = unname(file.size(files))
+)
+
+table_md <- function(df) {
+  c(
+    paste0("| ", paste(names(df), collapse = " | "), " |"),
+    paste0("| ", paste(rep("---", ncol(df)), collapse = " | "), " |"),
+    apply(df, 1, function(r) paste0("| ", paste(r, collapse = " | "), " |"))
+  )
+}
+
+si <- utils::sessionInfo()
+out <- c(
+  "# zupix benchmarks",
+  "",
+  sprintf(
+    "Written by `tools/run-benchmarks` on %s: R %s, %s, %s.",
+    format(Sys.Date()), getRversion(), si$running, R.version$arch
+  ),
+  sprintf(
+    "Packages: png %s, jpeg %s, webp %s.",
+    utils::packageVersion("png"), utils::packageVersion("jpeg"),
+    utils::packageVersion("webp")
+  ),
+  "",
+  "The image is a seeded 4000 x 3000 synthetic photograph (12 megapixels,",
+  "RGB). Medians of at least five runs. zupix's own rows arrive with the",
+  "stages that build each codec; design §10 sets the targets against these.",
+  "qoi is not measured: qoi 0.1.0's writeQOI() overflows the C stack on an",
+  "image this size, and design §10 sets no QOI target.",
+  "",
+  "## Baseline: decoding",
+  "",
+  table_md(decode),
+  "",
+  "## Baseline: encoding",
+  "",
+  table_md(encode),
+  "",
+  "## Baseline: file sizes",
+  "",
+  table_md(sizes)
+)
+writeLines(out, ".agents/benchmarks.md")
+cat(out, sep = "\n")

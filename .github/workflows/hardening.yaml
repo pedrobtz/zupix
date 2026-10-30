@@ -1,0 +1,44 @@
+# Gates R CMD check cannot express. Each runs next to its canary: a gate
+# counts once it has been seen to fail, so every run also proves it can
+# still see what it guards against. See .agents/roadmap.md.
+#
+# Stage 1: the compiled-code gate (tools/check-symbols). Later stages add
+# the hostile-input suites and fuzzing.
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '**.md'
+      - '_pkgdown.yml'
+      - '.agents/**'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - '_pkgdown.yml'
+      - '.agents/**'
+      - 'docs/**'
+
+name: hardening
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  symbols:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    name: no forbidden imports, one export (${{ matrix.os }})
+    steps:
+      - uses: actions/checkout@v6
+      - uses: r-lib/actions/setup-r@v2
+      - name: zupix.so imports no stdio, exit, abort, getenv or RNG and exports only R_init_zupix
+        run: ./tools/check-symbols
+      - name: canary - a shared object that breaks both rules must fail
+        run: ./tools/check-symbols --canary

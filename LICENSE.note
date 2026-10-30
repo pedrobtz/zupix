@@ -1,0 +1,21 @@
+zupix's own code is under the MIT licence (see LICENSE). It bundles four
+third-party libraries under src/vendor/, each under its own licence, whose
+full texts are in the source package and are installed with the package:
+
+  Wuffs          MIT and Apache-2.0  src/vendor/wuffs/LICENSE*
+                                     <zupix>/licenses/wuffs-LICENSE*
+  libjpeg-turbo  IJG                 src/vendor/libjpeg-turbo/README.ijg
+                                     <zupix>/licenses/libjpeg-turbo-README.ijg
+  libwebp        BSD-3-Clause        src/vendor/libwebp/COPYING, PATENTS
+                                     <zupix>/licenses/libwebp-*
+  qoi.h          MIT                 src/vendor/qoi/LICENSE
+                                     <zupix>/licenses/qoi-LICENSE
+
+Wuffs is distributed under both the MIT license and the Apache License 2.0;
+zupix redistributes it under both and meets the conditions of both. Only
+the libjpeg API library of libjpeg-turbo is included, which is under the
+IJG License alone. This software is based in part on the work of the
+Independent JPEG Group.
+
+inst/COPYRIGHTS lists every copyright holder, the upstream release and
+commit of each library, what was included, and the local patches applied.

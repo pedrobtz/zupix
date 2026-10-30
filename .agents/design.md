@@ -633,6 +633,8 @@ longjmps or raises. Stage 7 is the closing full run.
 ## 13. Decisions
 
 All **(C)**: this RFC decides, and the maintainer may overturn.
+**2026-10-30: the maintainer accepted D1 to D18 as written** before
+Stage 1 started; they stand as maintainer decisions from that date.
 
 - **D1 (C).** Decode all four formats with Wuffs, pinned to a
   `v0.4.0-alpha` tag by commit and sha256, pragmas patched out. Memory
@@ -716,11 +718,18 @@ All **(C)**: this RFC decides, and the maintainer may overturn.
 
 ## 15. Open questions
 
-- **Q1.** Does `wuffs-v0.4.c` compile without warnings on every CRAN
+- **Q1.** *Partly answered 2026-10-30 (Stage 1): `v0.4.0-alpha.12`,
+  with its 306 diagnostic pragmas removed and one unused function
+  deleted, compiles with no warning under clang `-Wall -pedantic` in
+  about 8 s; GCC and every CRAN-like leg are the Stage 1 gate.* Does
+  `wuffs-v0.4.c` compile without warnings on every CRAN
   flavour once its pragmas are gone, and how long does it take? Stage
   0's gate; the alpha tag is chosen then (alpha.12 is ten days old).
-- **Q2.** Wuffs's `LICENSE` says "both" MIT and Apache-2.0, not
-  "either". Shipping both texts and complying with both is safe on any
+- **Q2.** *Answered 2026-10-30 (Stage 1): both texts ship, zupix complies
+  with both (Apache-2.0 §4(b)'s notice is in the patched file), and
+  `License:` stays `MIT + file LICENSE` with the vendored licences in
+  `LICENSE.note` and `inst/COPYRIGHTS`.* Wuffs's `LICENSE` says "both"
+  MIT and Apache-2.0, not "either". Shipping both texts and complying with both is safe on any
   reading; the `License:` and `LICENSE.note` wording want the
   maintainer's eye.
 - **Q3.** CMYK JPEG: Wuffs offers no CMYK destination, so `zucolor`

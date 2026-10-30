@@ -17,7 +17,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupix/issues/2) | [#15](https://github.com/pedrobtz/zupix/pull/15) | 2026-10-30 |
-| 1 | [Vendored codecs and the Wuffs gate](#stage-1--vendored-codecs-and-the-wuffs-gate) | full | [#3](https://github.com/pedrobtz/zupix/issues/3) | | |
+| 1 | [Vendored codecs and the Wuffs gate](#stage-1--vendored-codecs-and-the-wuffs-gate) | full | [#3](https://github.com/pedrobtz/zupix/issues/3) | [#16](https://github.com/pedrobtz/zupix/pull/16) | 2026-10-30 |
 | 2 | [Decoding PNG and QOI](#stage-2--decoding-png-and-qoi) | full | [#4](https://github.com/pedrobtz/zupix/issues/4) | | |
 | 3 | [JPEG, WebP and metadata](#stage-3--jpeg-webp-and-metadata) | full | [#5](https://github.com/pedrobtz/zupix/issues/5) | | |
 | 4 | [Lossless encoders](#stage-4--lossless-encoders) | quick | [#6](https://github.com/pedrobtz/zupix/issues/6) | | |
@@ -101,6 +101,19 @@ re-planned onto the reference decoders (design §4.1, D1).
 - Recorded in this roadmap: tarball size, Wuffs's compile time on the
   slowest leg, and the baseline of `png`, `jpeg`, `webp` and `qoi` from
   `tools/run-benchmarks` into `.agents/benchmarks.md` (design §10).
+
+**Recorded 2026-10-30.** Source tarball 1.06 MB. `src/zpx_wuffs.c`
+compiles in about 8 s at `-O2` on clang (macOS x86_64); the slowest CI leg
+is read from the pull request's run. Baseline in `.agents/benchmarks.md`
+for `png`, `jpeg` and `webp`. Deviation: `qoi` is not in the baseline,
+because qoi 0.1.0's `writeQOI()` overflows the C stack on a 12-megapixel
+image and design §10 sets no QOI target. Further deviations: Wuffs needed a
+second patch (an unused function the pragmas had hidden), and libwebp
+needs `-DWEBP_EXTERN=extern` so its API is not exported. GCC 16 then
+flagged `-Woverflow` in libwebp's `rescaler_sse2.c`, fixed upstream after
+1.6.0 (commit 220e3d31), so libwebp carries that commit as a backport
+patch. Wuffs itself passed every leg, GCC 16 included: D1's gate holds. The forbidden-symbol
+step is `tools/check-symbols` in `hardening.yaml`, with a canary.
 
 **Exit criteria.**
 

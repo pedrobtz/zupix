@@ -1,0 +1,19 @@
+# Guards the vendored sources under src/vendor/: runs tools/vendor/verify,
+# and on pull requests fails when a vendored file changes without
+# tools/vendor/manifest.tsv and tools/vendor/checksums.sha256 changing too.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+name: vendor
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  vendor:
+    uses: pedrobtz/r-actions/.github/workflows/vendor.yml@v1
