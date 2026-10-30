@@ -39,6 +39,11 @@
   lossless); QOI uses the reference encoder. PNG, JPEG and WebP embed an
   optional ICC profile and EXIF block.
 
+- Other packages’ C code can sniff, probe, decode, read metadata and
+  encode through a registered table: `Imports` and `LinkingTo: zupix`,
+  then `#include <zupix-r.h>` and call `zupix_api()`. The table never
+  calls R or raises an R error. See `inst/include/zupix.h`.
+
 - [`pix_orient()`](https://pedrobtz.github.io/zupix/reference/pix_orient.md)
   applies an EXIF orientation losslessly; `pix_read(orient = TRUE)` does
   so while reading. Pixels come back as stored by default.

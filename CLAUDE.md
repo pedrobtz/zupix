@@ -126,6 +126,11 @@ Growing as stages land; `.agents/design.md` §4 plans the layers.
   `tools/make-fixtures.R` (needs the jpeg and webp packages); PNG and
   QOI are built byte by byte in `tests/testthat/helper-images.R`, which
   also splices metadata into files.
+- The C table (`src/zpx_table.c`) is the public C API:
+  `inst/include/zupix.h` (pure C99, also the source of the core’s shared
+  types) and `inst/include/zupix-r.h`. `tools/zupixtest` calls it from
+  outside, run by `abi.yaml` on all three OSes. `tools/zupixtest` is
+  `.Rbuildignore`d.
 - `src/zpx_r.c` is the only R-aware C; `src/zpx_init.c` registers it. It
   returns pixels or a `zupix_failure` list, and `R/conditions.R` turns
   the failure into the classed condition, so no C code raises an R
@@ -147,8 +152,8 @@ Growing as stages land; `.agents/design.md` §4 plans the layers.
 
 ## Invariants that are easy to break
 
-These are fixed by the design before any code exists. Each guards
-something the code will not show.
+Fixed by the design, and still true. Each guards something the code will
+not show.
 
 - **No `Imports`, `LinkingTo` or `SystemRequirements`.** zlib is linked
   with `-lz` from R’s toolchain (D3); every other codec is vendored. A
@@ -168,6 +173,12 @@ something the code will not show.
   applied only on request (D9); channels may be added, never removed
   (D10). Each of these is a colour decision that belongs to the caller
   or to zucolor.
+- **`zupix.h` and `zupix_api_v1` are an ABI.** Siblings link against
+  them before CRAN does. Never reorder or retype a field or enum value;
+  add fields only at the end of a struct (callers set `struct_size`),
+  and anything else means `ZUPIX_ABI_VERSION` 2 and a new table type,
+  with `zupix_get_api(1)` kept working. `test-abi.R` and `abi.yaml`
+  guard it.
 - **Only `R_init_zupix` is exported** from the shared object. No
   `wuffs_`, `jpeg_`, `jinit`, `WebP` or `qoi_` symbol may leak, or zupix
   collides with any other package that links those libraries;
