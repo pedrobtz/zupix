@@ -741,7 +741,12 @@ Stage 1 started; they stand as maintainer decisions from that date.
   R holds without long vectors.
 - **Q5.** QOI's `linear` colourspace byte is reported and nothing is
   done with it, by D8. Should `pix_read()` at least warn?
-- **Q6.** The corpus licences (PngSuite, libwebp's test files, the QOI
+- **Q6.** *Answered 2026-10-30 (Stage 7): PngSuite ("permission to use,
+  copy, modify and distribute") and libjpeg-turbo's test images (IJG,
+  BSD-3, ICC) are committed under `tests/testthat/corpus/`;
+  libwebp-test-data and the QOI test images carry no redistribution
+  licence and are downloaded, pinned, in CI only.* The corpus licences
+  (PngSuite, libwebp's test files, the QOI
   test images) were not read for this RFC; Stage 6 reads them first.
 - **Q7.** Is v0.1.0 a CRAN submission? This RFC assumes `CRAN intent:
   Planned`, since `zuraster` and `zuocr` would depend on it.

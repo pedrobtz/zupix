@@ -193,13 +193,28 @@ not show.
   definition of done.
 - **Borrow a conformance suite before writing one.** Mainstream
   implementations in Python, Java, Go or Node usually ship a test corpus.
-  Use it as an oracle rather than inventing cases by hand. The design
-  names PngSuite, libjpeg-turbo's `testimages`, libwebp's test files and
-  the QOI test images, with `png`, `jpeg`, `webp` and `qoi` as
-  differential oracles (design §9). Their licences are not yet read (Q6);
-  files that may not be redistributed are downloaded in CI only.
-- **Helpers live in `tests/testthat/helper-*.R`.** None yet.
-- **Keep the suite inside the CRAN time budget.** No suite yet.
+  Use it as an oracle rather than inventing cases by hand. Here: PngSuite
+  and libjpeg-turbo's test images, committed under `tests/testthat/corpus/`
+  by `tools/make-corpus.sh`; libwebp-test-data and the QOI test images,
+  which may not be redistributed, downloaded by `hardening.yaml` and found
+  through `ZUPIX_CORPUS`. Oracles: `png::readPNG()` (exact on all of
+  PngSuite), libjpeg-turbo's `djpeg` (exact; the jpeg package bundles IJG
+  libjpeg 9e, which upsamples chroma differently), `webp::read_webp()` and
+  `qoi.h`. Known Wuffs divergences are pinned in `test-conformance.R` so an
+  upstream fix shows up there.
+- **Helpers live in `tests/testthat/helper-*.R`.** `helper-images.R` builds
+  PNG and QOI byte by byte and splices metadata into files;
+  `helper-corpus.R` finds the corpora and drives the hostile suite;
+  `helper-abi.R` reads the shared object's symbol tables. A function
+  defined at file scope in a test file breaks `shuffle = TRUE`.
+- **Keep the suite inside the CRAN time budget.** About 12 s locally. The
+  expensive variants are opt-in: `ZUPIX_HOSTILE=full` (every corpus file
+  cut at each of its first 4,096 offsets, about 2 minutes) and
+  `ZUPIX_ROUNDTRIPS=10000`; `hardening.yaml` sets both.
+- **Fuzzing** (`fuzz/`): `fuzz/replay.sh` replays every target's seeds and
+  regressions under ASan and UBSan without libFuzzer (works on macOS);
+  `fuzz/build.sh` and `fuzz/run.sh` need a libFuzzer clang. A crash found
+  in CI goes into `fuzz/corpus/regressions/<target>/` with its fix.
 
 ## Definition of done
 

@@ -23,7 +23,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | 4 | [Lossless encoders](#stage-4--lossless-encoders) | quick | [#6](https://github.com/pedrobtz/zupix/issues/6) | [#19](https://github.com/pedrobtz/zupix/pull/19) | 2026-10-30 |
 | 5 | [Lossy encoders and metadata embedding](#stage-5--lossy-encoders-and-metadata-embedding) | quick | [#7](https://github.com/pedrobtz/zupix/issues/7) | [#20](https://github.com/pedrobtz/zupix/pull/20) | 2026-10-30 |
 | 6 | [C table](#stage-6--c-table) | full | [#8](https://github.com/pedrobtz/zupix/issues/8) | [#21](https://github.com/pedrobtz/zupix/pull/21) | 2026-10-30 |
-| 7 | [Conformance, hostile input and fuzzing](#stage-7--conformance-hostile-input-and-fuzzing) | quick | [#9](https://github.com/pedrobtz/zupix/issues/9) | | |
+| 7 | [Conformance, hostile input and fuzzing](#stage-7--conformance-hostile-input-and-fuzzing) | quick | [#9](https://github.com/pedrobtz/zupix/issues/9) | | 2026-10-30 |
 | 8 | [Documentation and benchmarks](#stage-8--documentation-and-benchmarks) | quick | [#10](https://github.com/pedrobtz/zupix/issues/10) | | |
 | 9 | [Full CI](#stage-9--full-ci) | full | [#11](https://github.com/pedrobtz/zupix/issues/11) | | |
 | 10 | [v0.1.0 readiness](#stage-10--v010-readiness) | full | [#12](https://github.com/pedrobtz/zupix/issues/12) | | |
@@ -210,12 +210,14 @@ pixel decode.
   lossless JPEG.
 
 **Recorded 2026-10-30.** Deviations: (1) `jpeg::readJPEG()` does not agree
-within 2 levels on colour JPEG: Wuffs and libjpeg-turbo use different fancy
-chroma-upsampling filters. Grey is exact. On a 320 x 240 4:2:0 image 99.9%
-of samples are within 2 and the worst is 4; on the 16 x 12 test fixture,
-where edges dominate, the worst is 9. The tolerance is recorded per file in
-`test-jpeg-webp.R`, as design §9 allows. (2) Wuffs decodes still WebP only,
-so an animated WebP's first frame is rebuilt as a still file and decoded
+within 2 levels on colour JPEG; grey is exact. *Corrected 2026-10-30 in
+Stage 7:* the cause is not Wuffs. The jpeg package bundles IJG libjpeg 9e,
+whose chroma upsampling differs from libjpeg-turbo's; Wuffs matches
+libjpeg-turbo's `djpeg` bit for bit on libjpeg-turbo's own test images
+and on zupix-written baseline and progressive files. The per-file
+tolerance against the jpeg package stays in `test-jpeg-webp.R`, and an
+exact test against `djpeg` runs wherever it is installed. (2) Wuffs
+decodes still WebP only, so an animated WebP's first frame is rebuilt as a still file and decoded
 when it covers the canvas; a smaller first frame is
 `zupix_unsupported_error`, since compositing is not implemented. (3) An
 EXIF block that cannot be read gives orientation `NA` rather than an
@@ -402,6 +404,31 @@ cover every decoder and scanner.
 - Lossless round trips on 10⁴ random images per format and depth, gated
   behind an environment variable so CRAN runs a small sample.
 
+**Recorded 2026-10-30.** Q6 answered (design §15): PngSuite and
+libjpeg-turbo's test images are committed (`tools/make-corpus.sh`);
+libwebp-test-data (pinned commit) and the QOI test images (pinned sha256)
+are downloaded in CI only. Results: all 161 valid PngSuite files decode
+exactly as `png::readPNG()` does, after a fix found here (a `tRNS` key's
+pixels now keep the key colour the file holds, where Wuffs wrote
+transparent black), and all 14 corrupt ones fail with the class their
+names predict. Wuffs matches libjpeg-turbo's `djpeg` exactly, which
+corrects Stage 3's account of the jpeg package's differences (the jpeg
+package bundles IJG libjpeg 9e). All 131 libwebp-test-data files decode;
+123 match libwebp exactly, alpha is exact everywhere, and 8 lossy files
+differ in colour by up to 32 levels although VP8 is specified bit-exactly:
+a Wuffs v0.4.0-alpha.12 VP8 bug. The QOI `edgecase` image decodes with
+10,272 transparent pixels the reference decoder makes opaque: a Wuffs QOI
+bug (a run's pixel is not entered into the colour index). Both are pinned
+in `test-conformance.R` and left for the maintainer (open questions
+below). Hostile: the full design §9 truncation set and 256 byte flips per
+file run clean in about 2 minutes (`ZUPIX_HOSTILE=full`); CRAN runs a
+sample. `fuzz/` has eight targets, a canary and a replay driver; fuzz.yaml
+runs each for 60 s on a pull request and 10 minutes nightly or with the
+`fuzz-long` label. Deviation: the hostile suite runs in full in
+`hardening.yaml`, not under ASan in the full profile; under ASan it is the
+fuzz targets (libFuzzer, ASan, UBSan) and `fuzz/replay.sh` that cover
+truncated and corrupt input.
+
 **Exit criteria.**
 
 - Every PngSuite file decodes as `png` does or fails with the class its
@@ -523,3 +550,9 @@ From design §14, in the expected order:
 - **Q6** (Stage 7): the corpus licences.
 - **Q7** (Stage 10): is v0.1.0 a CRAN submission? This roadmap assumes
   `CRAN intent: Planned`.
+- **Wuffs decoding bugs** (found in Stages 5 and 7, all in v0.4.0-alpha.12):
+  VP8L inside a VP8X container fails (worked around by rebuilding the file);
+  lossy VP8 differs from libwebp on 8 of libwebp-test-data's files; QOI's
+  `edgecase` decodes with wrong alpha. Keep Wuffs and report upstream, or
+  decode lossy WebP and QOI with libwebp's decoder and `qoi.h` (a change
+  to D1)? Not reported upstream yet.
