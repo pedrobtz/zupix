@@ -26,3 +26,24 @@ Useful links:
 Authors:
 
 - Pedro Baltazar <pedrobtz@gmail.com> \[copyright holder\]
+
+Other contributors:
+
+- The Wuffs Authors (bundled Wuffs library) \[copyright holder\]
+
+- Thomas G. Lane (bundled libjpeg-turbo, from the Independent JPEG
+  Group's software) \[contributor, copyright holder\]
+
+- Guido Vollbeding (bundled libjpeg-turbo, from the Independent JPEG
+  Group's software) \[contributor, copyright holder\]
+
+- D. R. Commander (bundled libjpeg-turbo) \[contributor, copyright
+  holder\]
+
+- Google Inc. (bundled libwebp, and parts of bundled libjpeg-turbo)
+  \[copyright holder\]
+
+- Dominic Szablewski (bundled qoi.h) \[contributor, copyright holder\]
+
+- Other contributors to libjpeg-turbo (see inst/COPYRIGHTS) \[copyright
+  holder\]

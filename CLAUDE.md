@@ -89,12 +89,31 @@ Rscript -e 'devtools::check()'                   # R CMD check
 air format .                                     # format R sources
 ```
 
+Occasional, for vendored code and its gates:
+
+``` sh
+tools/vendor/verify          # vendored tree == manifest + patches (offline)
+tools/vendor/fetch [source]  # re-vendor from tools/vendor/manifest.tsv
+tools/check-symbols          # zupix.so imports no stdio/exit/abort/getenv/RNG,
+                             # exports only R_init_zupix (add --canary)
+tools/run-benchmarks         # design §10, into .agents/benchmarks.md
+```
+
 ## Architecture
 
-To be written as stages land; see `.agents/design.md` (§4 plans the
-layers). The scaffold set up C through `usethis::use_c()`: `src/zupix.c`
-is an empty stub and `R/zupix-package.R` carries
-`@useDynLib zupix, .registration = TRUE`.
+Growing as stages land; `.agents/design.md` §4 plans the layers.
+
+- `src/vendor/<lib>/` is upstream code, trimmed by
+  `tools/vendor/<lib>.files`, pinned and patched by
+  `tools/vendor/manifest.tsv` and `tools/patches/<lib>/`. Never edit it
+  by hand: change a patch and re-run `tools/vendor/fetch`.
+- Wuffs and `qoi.h` are single files compiled through one zupix
+  translation unit each (`src/zpx_wuffs.c`, `src/zpx_qoi.c`), which set
+  the module and implementation macros. libjpeg-turbo and libwebp
+  compile file by file from the object lists in `src/Makevars`.
+- `src/jpeg-config/` holds zupix’s hand-written stand-ins for the
+  headers libjpeg-turbo’s CMake build generates.
+- `src/zpx_r.c` is the only R-aware C; `src/zpx_init.c` registers it.
 
 ## Invariants that are easy to break
 

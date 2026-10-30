@@ -77,11 +77,24 @@
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(shuffle = TRUE)'</span>      <span class="co"># order independence</span></span>
 <span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::check()'</span>                   <span class="co"># R CMD check</span></span>
 <span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="ex">air</span> format .                                     <span class="co"># format R sources</span></span></code></pre></div>
+<p>Occasional, for vendored code and its gates:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">tools/vendor/verify</span>          <span class="co"># vendored tree == manifest + patches (offline)</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="ex">tools/vendor/fetch</span> <span class="pp">[</span><span class="ss">source</span><span class="pp">]</span>  <span class="co"># re-vendor from tools/vendor/manifest.tsv</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="ex">tools/check-symbols</span>          <span class="co"># zupix.so imports no stdio/exit/abort/getenv/RNG,</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>                             <span class="co"># exports only R_init_zupix (add --canary)</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="ex">tools/run-benchmarks</span>         <span class="co"># design §10, into .agents/benchmarks.md</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="architecture">Architecture<a class="anchor" aria-label="anchor" href="#architecture"></a></h2>
-<p>To be written as stages land; see <code>.agents/design.md</code> (§4 plans the layers). The scaffold set up C through <code>usethis::use_c()</code>: <code>src/zupix.c</code> is an empty stub and <code>R/zupix-package.R</code> carries <code>@useDynLib zupix, .registration = TRUE</code>.</p>
-</div>
+<p>Growing as stages land; <code>.agents/design.md</code> §4 plans the layers.</p>
+<ul><li>
+<code>src/vendor/&lt;lib&gt;/</code> is upstream code, trimmed by <code>tools/vendor/&lt;lib&gt;.files</code>, pinned and patched by <code>tools/vendor/manifest.tsv</code> and <code>tools/patches/&lt;lib&gt;/</code>. Never edit it by hand: change a patch and re-run <code>tools/vendor/fetch</code>.</li>
+<li>Wuffs and <code>qoi.h</code> are single files compiled through one zupix translation unit each (<code>src/zpx_wuffs.c</code>, <code>src/zpx_qoi.c</code>), which set the module and implementation macros. libjpeg-turbo and libwebp compile file by file from the object lists in <code>src/Makevars</code>.</li>
+<li>
+<code>src/jpeg-config/</code> holds zupix’s hand-written stand-ins for the headers libjpeg-turbo’s CMake build generates.</li>
+<li>
+<code>src/zpx_r.c</code> is the only R-aware C; <code>src/zpx_init.c</code> registers it.</li>
+</ul></div>
 <div class="section level2">
 <h2 id="invariants-that-are-easy-to-break">Invariants that are easy to break<a class="anchor" aria-label="anchor" href="#invariants-that-are-easy-to-break"></a></h2>
 <p>These are fixed by the design before any code exists. Each guards something the code will not show.</p>
