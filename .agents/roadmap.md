@@ -217,8 +217,9 @@ libjpeg-turbo's `djpeg` bit for bit on libjpeg-turbo's own test images
 and on zupix-written baseline and progressive files. The per-file
 tolerance against the jpeg package stays in `test-jpeg-webp.R`, and an
 exact test against `djpeg` runs wherever it is installed. (2) Wuffs
-decodes still WebP only, so an animated WebP's first frame is rebuilt as a still file and decoded
-when it covers the canvas; a smaller first frame is
+decodes still WebP only, so an animated WebP's first frame is rebuilt as
+a still file and decoded when it covers the canvas; a smaller first frame
+is
 `zupix_unsupported_error`, since compositing is not implemented. (3) An
 EXIF block that cannot be read gives orientation `NA` rather than an
 error, so a damaged EXIF never blocks the pixels; `pix_exif()` still
