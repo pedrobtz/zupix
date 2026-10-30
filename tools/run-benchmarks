@@ -1,14 +1,14 @@
 #!/usr/bin/env Rscript
 # Design §10's benchmarks, written to .agents/benchmarks.md.
 #
-#   tools/run-benchmarks            the baseline: png, jpeg and webp on a
-#                                   12-megapixel synthetic photograph
+#   tools/run-benchmarks            zupix against png, jpeg and webp on a
+#                                   12-megapixel synthetic photograph, and
+#                                   pix_info() on 1,000 files
 #
 # qoi is left out: qoi 0.1.0's writeQOI() overflows the C stack on a
 # 12-megapixel image (seen 2026-10-30), and design §10 sets no QOI target.
 #
-# Until zupix decodes and encodes (Stages 2 to 5) this records only the
-# baseline zupix's targets are measured against. The image is synthetic and
+# The image is synthetic and
 # seeded, so every run measures the same pixels: smooth gradients, a few
 # soft shapes and sensor-like noise, which compresses like a photograph
 # rather than like flat colour or pure noise.
@@ -36,7 +36,30 @@ photograph <- function(width = 4000L, height = 3000L, seed = 20261030L) {
   img
 }
 
+# zupix as it is in this checkout, installed into a temporary library so it
+# is compiled as R CMD INSTALL compiles it: devtools::load_all() builds with
+# -O0, which makes Wuffs several times slower.
+lib <- tempfile("zupix-lib")
+dir.create(lib)
+# From a freshly built tarball: installing "." would reuse any objects in
+# src/, and devtools::load_all() leaves -O0 ones there.
+r <- file.path(R.home("bin"), "R")
+root <- normalizePath(".")
+old <- setwd(lib)
+status <- system2(r, c("CMD", "build", "--no-build-vignettes", "--no-manual",
+                       shQuote(root)), stdout = FALSE, stderr = FALSE)
+tarball <- list.files(lib, "^zupix_.*[.]tar[.]gz$", full.names = TRUE)
+if (status == 0) {
+  status <- system2(r, c("CMD", "INSTALL", "--no-test-load",
+                         paste0("--library=", shQuote(lib)), shQuote(tarball)),
+                    stdout = FALSE, stderr = FALSE)
+}
+setwd(old)
+if (status != 0) stop("building or installing zupix failed")
+suppressPackageStartupMessages(library(zupix, lib.loc = lib))
 img <- photograph()
+img_int <- array(as.integer(round(img * 255)), dim(img))
+attr(img_int, "bits") <- 8L
 dir <- tempfile("zupix-bench")
 dir.create(dir)
 files <- c(
@@ -59,13 +82,70 @@ run <- function(...) {
 
 decode <- run(
   "png::readPNG(native = TRUE)" = png::readPNG(files[["png"]], native = TRUE),
+  "pix_read(png)" = pix_read(files[["png"]]),
   "jpeg::readJPEG(native = TRUE)" = jpeg::readJPEG(files[["jpeg"]], native = TRUE),
-  "webp::read_webp()" = webp::read_webp(files[["webp"]])
+  "pix_read(jpeg)" = pix_read(files[["jpeg"]]),
+  "webp::read_webp()" = webp::read_webp(files[["webp"]]),
+  "pix_read(webp)" = pix_read(files[["webp"]])
 )
 encode <- run(
   "png::writePNG()" = png::writePNG(img),
+  "pix_write_png(compression = 6)" = pix_write_png(img_int),
   "jpeg::writeJPEG(quality = 0.9)" = jpeg::writeJPEG(img, quality = 0.9),
-  "webp::write_webp(quality = 75)" = webp::write_webp(img, quality = 75)
+  "pix_write_jpeg(quality = 90)" = pix_write_jpeg(img_int, quality = 90L),
+  "webp::write_webp(quality = 75)" = webp::write_webp(img, quality = 75),
+  "pix_write_webp(quality = 75)" = pix_write_webp(img_int, quality = 75)
+)
+png_sizes <- c(
+  png = length(png::writePNG(img)),
+  zupix = length(pix_write_png(img_int))
+)
+
+# pix_info() on 1,000 small files of every format, from a temporary
+# directory.
+many <- file.path(dir, "many")
+dir.create(many)
+small <- img_int[1:64, 1:64, ]
+attr(small, "bits") <- 8L
+writers <- list(png = pix_write_png, jpg = pix_write_jpeg,
+                webp = pix_write_webp, qoi = pix_write_qoi)
+paths <- character(1000)
+for (i in seq_along(paths)) {
+  ext <- names(writers)[[(i - 1L) %% 4L + 1L]]
+  paths[[i]] <- file.path(many, sprintf("%04d.%s", i, ext))
+  writers[[ext]](small, paths[[i]])
+}
+info_time <- as.numeric(bench::mark(pix_info(paths), min_iterations = 3,
+                                    check = FALSE)$median)
+
+ratio <- function(a, b) {
+  round(decode_or(a) / decode_or(b), 2)
+}
+decode_or <- function(name) {
+  rbind(decode, encode)$median_s[rbind(decode, encode)$operation == name]
+}
+targets <- data.frame(
+  operation = c(
+    "PNG decode to nativeRaster", "JPEG decode to nativeRaster",
+    "WebP decode", "PNG encode, level 6", "PNG encode size",
+    "JPEG encode, quality 90", "WebP encode", "pix_info() on 1,000 files"
+  ),
+  target = c(
+    "at most 1.0x png::readPNG()", "within 2x of jpeg::readJPEG()",
+    "within 2x of webp::read_webp()", "within 1.5x of png::writePNG()",
+    "no larger than png::writePNG()", "within 3x of jpeg::writeJPEG()",
+    "within 1.1x of webp::write_webp()", "under 1 s"
+  ),
+  measured = c(
+    paste0(ratio("pix_read(png)", "png::readPNG(native = TRUE)"), "x"),
+    paste0(ratio("pix_read(jpeg)", "jpeg::readJPEG(native = TRUE)"), "x"),
+    paste0(ratio("pix_read(webp)", "webp::read_webp()"), "x"),
+    paste0(ratio("pix_write_png(compression = 6)", "png::writePNG()"), "x"),
+    paste0(round(png_sizes[["zupix"]] / png_sizes[["png"]], 3), "x"),
+    paste0(ratio("pix_write_jpeg(quality = 90)", "jpeg::writeJPEG(quality = 0.9)"), "x"),
+    paste0(ratio("pix_write_webp(quality = 75)", "webp::write_webp(quality = 75)"), "x"),
+    paste0(round(info_time, 3), " s")
+  )
 )
 sizes <- data.frame(
   format = names(files),
@@ -89,26 +169,30 @@ out <- c(
     format(Sys.Date()), getRversion(), si$running, R.version$arch
   ),
   sprintf(
-    "Packages: png %s, jpeg %s, webp %s.",
-    utils::packageVersion("png"), utils::packageVersion("jpeg"),
-    utils::packageVersion("webp")
+    "Packages: zupix %s, png %s, jpeg %s, webp %s.",
+    utils::packageVersion("zupix"), utils::packageVersion("png"),
+    utils::packageVersion("jpeg"), utils::packageVersion("webp")
   ),
   "",
   "The image is a seeded 4000 x 3000 synthetic photograph (12 megapixels,",
-  "RGB). Medians of at least five runs. zupix's own rows arrive with the",
-  "stages that build each codec; design §10 sets the targets against these.",
+  "RGB). Medians of at least five runs. `webp::read_webp()` returns doubles;",
+  "zupix's rows return a nativeRaster.",
+  "",
+  "## Design §10 targets",
+  "",
+  table_md(targets),
   "qoi is not measured: qoi 0.1.0's writeQOI() overflows the C stack on an",
   "image this size, and design §10 sets no QOI target.",
   "",
-  "## Baseline: decoding",
+  "## Decoding",
   "",
   table_md(decode),
   "",
-  "## Baseline: encoding",
+  "## Encoding",
   "",
   table_md(encode),
   "",
-  "## Baseline: file sizes",
+  "## Input file sizes",
   "",
   table_md(sizes)
 )

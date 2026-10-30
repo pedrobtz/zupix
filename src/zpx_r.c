@@ -3,6 +3,7 @@
 #define R_NO_REMAP
 #include <R.h>
 #include <Rinternals.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zlib.h>
@@ -369,25 +370,84 @@ static void free_buffer(void *data) {
   b->data = NULL;
 }
 
-/* format: a zpx_format. `pixels` is either a nativeRaster's integers
- * (native TRUE) or an integer vector holding a column-major
- * height x width x channels array whose values R has checked are within
- * 0..2^bits - 1 (bits is 8 for JPEG, WebP and QOI). opts: list(compression,
- * icc, exif, srgb, colourspace, quality, subsampling, progressive,
- * lossless, method). Returns the encoded file as a raw vector, or a
- * zupix_failure. */
-SEXP zpx_r_encode(SEXP pixels, SEXP native_, SEXP dims_, SEXP bits_,
-                  SEXP format_, SEXP opts_) {
-  int native = Rf_asLogical(native_);
+/* One sample of the caller's vector, as a double (integer NA as NaN). */
+static double sample_at(SEXP x, R_xlen_t i) {
+  if (TYPEOF(x) == REALSXP) return REAL(x)[i];
+  return INTEGER(x)[i] == NA_INTEGER ? R_NaN : (double) INTEGER(x)[i];
+}
+
+/* mode: 0 a nativeRaster's integers; 1 doubles in [0, 1], clamped and
+ * rounded to `target` bits; 2 sample values (integer or double) at
+ * `stored` bits (NA: 8 if every value is at most 255), converted to
+ * `target` bits (NA: as stored). `pixels` is the caller's vector itself,
+ * column-major height x width x channels (dims), so nothing is copied in
+ * R: validation and conversion happen here, in the pass that interleaves.
+ * format: a zpx_format. opts: list(compression, icc, exif, srgb,
+ * colourspace, quality, subsampling, progressive, lossless, method).
+ * Returns the encoded file as a raw vector, or a zupix_failure. */
+SEXP zpx_r_encode(SEXP pixels, SEXP mode_, SEXP dims_, SEXP stored_,
+                  SEXP target_, SEXP format_, SEXP opts_) {
+  int mode = Rf_asInteger(mode_), format = Rf_asInteger(format_);
   int h = INTEGER(dims_)[0], w = INTEGER(dims_)[1], c = INTEGER(dims_)[2];
-  int bits = Rf_asInteger(bits_), format = Rf_asInteger(format_);
-  int out_c = c, bytes = bits / 8;
+  int stored = Rf_asInteger(stored_), bits = Rf_asInteger(target_);
+  R_xlen_t n = XLENGTH(pixels);
   size_t pixels_n = (size_t) h * (size_t) w;
+  int out_c = c, bytes;
+  double smax, tmax;
   const char *detail = NULL;
   zpx_buffer buf = {NULL, 0, 0};
   zpx_status s;
   SEXP inter;
   uint8_t *dst;
+
+  /* Validate first: a failure must not leave half an image converted. */
+  if (mode == 0) {
+    stored = bits = 8;
+  } else if (mode == 1) {
+    for (R_xlen_t i = 0; i < n; i++)
+      if (ISNAN(REAL(pixels)[i]))
+        return failure(ZPX_ERR_ARGUMENT, "`x` has missing values",
+                       ZPX_LIMIT_NONE, 0, 0);
+    stored = bits;
+  } else {
+    double mx = 0;
+    for (R_xlen_t i = 0; i < n; i++) {
+      double v = sample_at(pixels, i);
+      if (ISNAN(v))
+        return failure(ZPX_ERR_ARGUMENT, "`x` has missing values",
+                       ZPX_LIMIT_NONE, 0, 0);
+      if (v != floor(v))
+        return failure(ZPX_ERR_ARGUMENT,
+                       "`x` holds non-integer sample values",
+                       ZPX_LIMIT_NONE, 0, 0);
+      if (v < 0)
+        return failure(ZPX_ERR_ARGUMENT, "`x` has negative sample values",
+                       ZPX_LIMIT_NONE, 0, 0);
+      if (v > mx) mx = v;
+    }
+    if (stored == NA_INTEGER) {
+      if (mx > 255)
+        return failure(ZPX_ERR_ARGUMENT,
+                       "`bits` is needed: `x` has values above 255 but no "
+                       "`bits` attribute; set it to 16L",
+                       ZPX_LIMIT_NONE, 0, 0);
+      stored = 8;
+    }
+    if (mx > (stored == 16 ? 65535.0 : 255.0))
+      return failure(ZPX_ERR_ARGUMENT,
+                     stored == 16 ? "`x` has values above 65535"
+                                  : "`x` has values above 255",
+                     ZPX_LIMIT_NONE, 0, 0);
+    if (bits == NA_INTEGER) bits = stored;
+  }
+  if (format == ZPX_FMT_QOI && bits != 8)
+    return failure(ZPX_ERR_ARGUMENT,
+                   "`x` is 16-bit, and QOI is 8-bit; read or convert it with "
+                   "bits = 8L",
+                   ZPX_LIMIT_NONE, 0, 0);
+  smax = stored == 16 ? 65535.0 : 255.0;
+  tmax = bits == 16 ? 65535.0 : 255.0;
+  bytes = bits / 8;
 
   /* QOI and WebP store only RGB or RGBA: grey widens without loss. JPEG
    * stores no alpha: an alpha channel that is entirely opaque is dropped,
@@ -396,11 +456,16 @@ SEXP zpx_r_encode(SEXP pixels, SEXP native_, SEXP dims_, SEXP bits_,
   if ((format == ZPX_FMT_QOI || format == ZPX_FMT_WEBP) && c < 3)
     out_c = c + 2;
   if (format == ZPX_FMT_JPEG && (c == 2 || c == 4)) {
-    const int *src = INTEGER(pixels);
     for (size_t i = 0; i < pixels_n; i++) {
-      unsigned a = native ? ((unsigned) src[i] >> 24)
-                          : (unsigned) src[i + (size_t) (c - 1) * pixels_n];
-      if (a != 255u)
+      int opaque;
+      if (mode == 0) {
+        opaque = ((unsigned) INTEGER(pixels)[i] >> 24) == 255u;
+      } else {
+        double a = sample_at(pixels, (R_xlen_t) (i + (size_t) (c - 1) *
+                                                     pixels_n));
+        opaque = mode == 1 ? a >= 1 : a == smax;
+      }
+      if (!opaque)
         return failure(ZPX_ERR_ARGUMENT,
                        "`x` has transparent pixels, which JPEG cannot store",
                        ZPX_LIMIT_NONE, 0, 0);
@@ -411,7 +476,7 @@ SEXP zpx_r_encode(SEXP pixels, SEXP native_, SEXP dims_, SEXP bits_,
                                  (R_xlen_t) (pixels_n * out_c * bytes)));
   dst = RAW(inter);
 
-  if (native) {
+  if (mode == 0) {
     const int *src = INTEGER(pixels);
     for (size_t i = 0; i < pixels_n; i++) {
       unsigned v = (unsigned) src[i];
@@ -419,7 +484,6 @@ SEXP zpx_r_encode(SEXP pixels, SEXP native_, SEXP dims_, SEXP bits_,
         dst[(size_t) out_c * i + k] = (uint8_t) (v >> (8 * k));
     }
   } else {
-    const int *src = INTEGER(pixels);
     for (int ch = 0; ch < out_c; ch++) {
       /* Unchanged or narrowed (JPEG's opaque alpha dropped), each channel
        * is its own. Widened grey: R, G and B all take the grey channel, and
@@ -427,8 +491,22 @@ SEXP zpx_r_encode(SEXP pixels, SEXP native_, SEXP dims_, SEXP bits_,
       int from = out_c <= c ? ch : (ch < 3 ? 0 : 1);
       for (size_t x = 0; x < (size_t) w; x++) {
         for (size_t y = 0; y < (size_t) h; y++) {
-          int v = src[y + x * (size_t) h + (size_t) from * pixels_n];
+          double d = sample_at(pixels, (R_xlen_t) (y + x * (size_t) h +
+                                                   (size_t) from * pixels_n));
+          unsigned v;
           size_t at = (y * (size_t) w + x) * out_c + ch;
+          if (mode == 1) {
+            /* Clamped to [0, 1]; nearbyint() rounds half to even, as R's
+             * round() does. */
+            d = d < 0 ? 0 : (d > 1 ? 1 : d);
+            v = (unsigned) nearbyint(d * tmax);
+          } else if (stored == 16 && bits == 8) {
+            v = ((unsigned) d + 128u) / 257u;
+          } else if (stored == 8 && bits == 16) {
+            v = (unsigned) d * 257u;
+          } else {
+            v = (unsigned) d;
+          }
           if (bytes == 1) {
             dst[at] = (uint8_t) v;
           } else {

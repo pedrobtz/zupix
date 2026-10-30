@@ -1,0 +1,129 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+# zupix
+
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/pedrobtz/zupix/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pedrobtz/zupix/actions/workflows/R-CMD-check.yaml)
+[![coverage](https://raw.githubusercontent.com/pedrobtz/zupix/gh-pages/badges/coverage.svg)](https://github.com/pedrobtz/zupix/actions/workflows/coverage.yaml)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
+
+zupix reads and writes PNG, JPEG, WebP and QOI images. Each of those formats
+is already readable from R, but through a system library (libpng, libjpeg,
+libwebp) or ImageMagick, which has to be installed before the package can
+be built from source. And images arrive from the network, from PDFs and
+from users, so decoding one is parsing input nobody has checked.
+
+zupix compiles every codec into the package and treats every file as
+hostile:
+
+* **No system library.** Installing zupix needs a C compiler and the zlib R
+  is built with, nothing else. Decoding goes through
+  [Wuffs](https://github.com/google/wuffs); encoding through zupix's own PNG
+  writer, [libjpeg-turbo](https://libjpeg-turbo.org/),
+  [libwebp](https://developers.google.com/speed/webp) and
+  [qoi.h](https://qoiformat.org/).
+* **Built for hostile input.** Wuffs's decoders are memory-safe by
+  construction, and every size an image declares is checked against
+  `pix_limits()` before anything is allocated. zupix's own metadata
+  scanners are fuzzed.
+* **The pixels the file holds.** No colour management, gamma or orientation
+  is applied unless you ask. ICC profiles and EXIF blocks come out as raw
+  bytes, and the EXIF orientation is applied only with `orient = TRUE`.
+* **Familiar shapes.** Images decode to a `nativeRaster` or an array, as
+  the png package returns them, at 8 or 16 bits, and the writers take the
+  same shapes back.
+* **A C interface for other packages.** The same codecs are available to
+  C code through a registered function table.
+
+## Installation
+
+zupix is not on CRAN yet. Install the development version from GitHub:
+
+``` r
+# install.packages("pak")
+pak::pak("pedrobtz/zupix")
+```
+
+## Usage
+
+```{r, message = FALSE}
+library(zupix)
+```
+
+`pix_info()` reads what an image is from its header, without decoding a
+pixel. It takes any number of files.
+
+```{r}
+f <- system.file("extdata", "gradient.png", package = "zupix")
+pix_info(f)[c("format", "width", "height", "bits", "colour_type", "alpha")]
+```
+
+`pix_read()` decodes to a `nativeRaster` by default, ready for
+`grid::grid.raster()`. Ask for `"integer"` or `"double"` to work with the
+values; the shape is `height x width x channels`.
+
+```{r}
+img <- pix_read(f, as = "integer")
+dim(img)
+img[1:2, 1:3, 1]
+```
+
+The writers take the same shapes. Here the image goes out as a JPEG that
+carries an EXIF orientation of 6, "rotate 90 degrees clockwise to display".
+Reading it back returns the pixels as stored unless `orient = TRUE` says
+to apply that.
+
+```{r}
+exif <- as.raw(c(0x49, 0x49, 0x2a, 0, 8, 0, 0, 0, 1, 0, 0x12, 1, 3, 0, 1, 0,
+                 0, 0, 6, 0, 0, 0, 0, 0, 0, 0))
+jpg <- pix_write_jpeg(img, quality = 90L, exif = exif)
+pix_info(jpg)$orientation
+dim(pix_read(jpg, as = "integer"))
+dim(pix_read(jpg, as = "integer", orient = TRUE))
+```
+
+Every size an image declares is checked before memory is allocated. A
+breach is a `zupix_limit_error` that names the limit, raised before any
+pixel memory exists.
+
+```{r, error = TRUE}
+pix_read(f, limits = pix_limits(max_pixels = 1000))
+```
+
+Every function starts with `pix_`, and every writer is `pix_write_` and a
+format; `pix_write()` picks one from the file's extension.
+
+## Learn more
+
+* [Getting started with zupix](https://pedrobtz.github.io/zupix/articles/zupix.html)
+  covers the shapes, metadata, writing, limits and errors, calling zupix
+  from C, how fast it is, and where it differs from the reference
+  decoders.
+* The [reference index](https://pedrobtz.github.io/zupix/reference/) lists
+  every function.
+
+## Acknowledgements
+
+zupix is built on [Wuffs](https://github.com/google/wuffs) (The Wuffs
+Authors), [libjpeg-turbo](https://libjpeg-turbo.org/),
+[libwebp](https://chromium.googlesource.com/webm/libwebp) (Google) and
+[qoi.h](https://github.com/phoboslab/qoi) (Dominic Szablewski), bundled under
+their own licences (see `inst/COPYRIGHTS`). This software is based in part
+on the work of the Independent JPEG Group.
+
+It is tested against [PngSuite](http://www.schaik.com/pngsuite/) (Willem van
+Schaik), libjpeg-turbo's and libwebp's test images and the QOI test images,
+with the [png](https://CRAN.R-project.org/package=png),
+[jpeg](https://CRAN.R-project.org/package=jpeg),
+[webp](https://CRAN.R-project.org/package=webp) and
+[qoi](https://CRAN.R-project.org/package=qoi) packages and libjpeg-turbo's
+`djpeg` as reference decoders.

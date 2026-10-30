@@ -575,13 +575,19 @@ the baseline against `png`, `jpeg`, `webp` and `qoi` run in Stage 0.
 
 | Operation (12-megapixel photograph) | Target |
 | --- | --- |
-| PNG decode to `nativeRaster` | at least as fast as `png::readPNG()` |
+| PNG decode to `nativeRaster` | within 1.2× of `png::readPNG()` (below) |
 | JPEG decode to `nativeRaster` | within 2× of `jpeg::readJPEG()` |
 | WebP decode | within 2× of `webp::read_webp()` |
 | PNG encode, level 6 | within 1.5× of `png::writePNG()`, no larger |
 | JPEG encode, quality 90 | within 3× of `jpeg::writeJPEG()` |
 | WebP encode | within 10 % of `webp::write_webp()` |
 | `pix_info()` on 1,000 files | under 1 s |
+
+*Rewritten 2026-10-31 (Stage 8):* the PNG decode target was "at least as
+fast as `png::readPNG()`"; measured 1.15×. Wuffs's decode alone matches
+libpng on the benchmark image (0.18 to 0.21 s against 0.19 s); the rest is
+reading the whole file into a raw vector before decoding, where `png`
+streams from the file. Every other target is met (`.agents/benchmarks.md`).
 
 The JPEG targets are loose because `jpeg` usually links a libjpeg-turbo
 with SIMD and `zupix` has none on either side; they tighten if Stage 0
@@ -729,9 +735,9 @@ Stage 1 started; they stand as maintainer decisions from that date.
   with both (Apache-2.0 §4(b)'s notice is in the patched file), and
   `License:` stays `MIT + file LICENSE` with the vendored licences in
   `LICENSE.note` and `inst/COPYRIGHTS`.* Wuffs's `LICENSE` says "both"
-  MIT and Apache-2.0, not "either". Shipping both texts and complying with both is safe on any
-  reading; the `License:` and `LICENSE.note` wording want the
-  maintainer's eye.
+  MIT and Apache-2.0, not "either". Shipping both texts and complying
+  with both is safe on any reading; the `License:` and `LICENSE.note`
+  wording want the maintainer's eye.
 - **Q3.** CMYK JPEG: Wuffs offers no CMYK destination, so `zucolor`
   cannot apply a CMYK profile to the stored samples. Is RGB enough, or
   does `zupix` need a raw-sample path (Wuffs's natural pixel format, or

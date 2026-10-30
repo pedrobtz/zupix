@@ -43,5 +43,6 @@ Suggests:
     webp,
     withr
 Config/testthat/edition: 3
+Config/Needs/website: rmarkdown
 URL: https://pedrobtz.github.io/zupix/, https://github.com/pedrobtz/zupix
 BugReports: https://github.com/pedrobtz/zupix/issues

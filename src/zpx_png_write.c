@@ -128,7 +128,10 @@ zpx_status zpx_int_encode_png(const uint8_t *src, uint32_t width,
     return ZPX_ERR_MEMORY;
   }
   memset(&z, 0, sizeof z);
-  if (deflateInit(&z, level) != Z_OK) {
+  /* Z_FILTERED, as libpng uses for filtered rows: filtered data is mostly
+   * small values, which the default strategy matches poorly and slowly. */
+  if (deflateInit2(&z, level, Z_DEFLATED, 15, 8,
+                   level == 0 ? Z_DEFAULT_STRATEGY : Z_FILTERED) != Z_OK) {
     free(rows); free(cand); free(zbuf);
     return ZPX_ERR_MEMORY;
   }

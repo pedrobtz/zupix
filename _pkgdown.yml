@@ -2,3 +2,30 @@ url: https://pedrobtz.github.io/zupix/
 template:
   bootstrap: 5
 
+reference:
+  - title: Reading
+    desc: Decode an image into a nativeRaster or an array, under limits.
+    contents:
+      - pix_read
+      - pix_format
+      - pix_limits
+  - title: Metadata
+    desc: Header, ICC profile, EXIF data and orientation, without decoding.
+    contents:
+      - pix_info
+      - pix_icc
+      - pix_orient
+  - title: Writing
+    contents:
+      - pix_write
+  - title: Errors and build information
+    contents:
+      - zupix-conditions
+      - zupix_info
+      - zupix-package
+
+articles:
+  - title: Articles
+    navbar: ~
+    contents:
+      - articles/zupix

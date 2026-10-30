@@ -73,7 +73,9 @@ pix_read <- function(
     zpx_raise_failure(res, sniffed_format(bytes))
   }
 
-  out <- res$pixels
+  # Taken out of the list first, so setting its dim does not copy it.
+  out <- res[["pixels"]]
+  res[["pixels"]] <- NULL
   if (as == "native") {
     dim(out) <- c(res$height, res$width)
     attr(out, "channels") <- 4L
@@ -159,6 +161,18 @@ read_input <- function(x, max_bytes, n = Inf, call = sys.call(-1L)) {
         ),
         call = call
       )
+    }
+  }
+  # A regular file of known size is read in one call; anything else (a
+  # connection, a URL) in chunks, stopping at max_bytes.
+  if (is.character(x) && !is.finite(n) && file.exists(x) && !dir.exists(x)) {
+    size <- file.size(x)
+    if (!is.na(size)) {
+      return(tryCatch(
+        readBin(x, "raw", n = size),
+        error = function(e) fail(conditionMessage(e)),
+        warning = function(w) fail(conditionMessage(w))
+      ))
     }
   }
   src <- zu_open_input(
