@@ -16,3 +16,4 @@
 ^\.superpowers$
 ^tools/zupixtest$
 ^fuzz$
+^README\.Rmd$
