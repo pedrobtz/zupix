@@ -8,7 +8,7 @@ FUZZ_CFLAGS="-g -O1 -fno-omit-frame-pointer -Iinst/include -Isrc -Ifuzz"
 sources_for() {
     case "$1" in
         fuzz_roundtrip) echo "$DECODE_SRC $ENCODE_SRC" ;;
-        fuzz_canary) echo "fuzz/fuzz_common.c $DECODE_SRC" ;;
+        fuzz_canary) echo "$DECODE_SRC" ;;
         *) echo "$DECODE_SRC" ;;
     esac
 }
