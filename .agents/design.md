@@ -736,8 +736,8 @@ Stage 1 started; they stand as maintainer decisions from that date.
   `License:` stays `MIT + file LICENSE` with the vendored licences in
   `LICENSE.note` and `inst/COPYRIGHTS`.* Wuffs's `LICENSE` says "both"
   MIT and Apache-2.0, not "either". Shipping both texts and complying
-  with both is safe on any reading; the `License:` and `LICENSE.note` wording want the
-  maintainer's eye.
+  with both is safe on any reading; the `License:` and `LICENSE.note`
+  wording want the maintainer's eye.
 - **Q3.** CMYK JPEG: Wuffs offers no CMYK destination, so `zucolor`
   cannot apply a CMYK profile to the stored samples. Is RGB enough, or
   does `zupix` need a raw-sample path (Wuffs's natural pixel format, or
