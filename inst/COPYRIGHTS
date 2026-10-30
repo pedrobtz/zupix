@@ -1,0 +1,119 @@
+zupix package
+=============
+
+Copyright (c) 2026 Pedro Baltazar.
+Licensed under the MIT license; see DESCRIPTION and the file LICENSE. The
+MIT license covers only the code written for this package: everything
+outside src/vendor/. The hand-written libjpeg-turbo configuration headers
+in src/jpeg-config/ are zupix's own, written in place of files libjpeg-turbo's
+build system generates.
+
+This software is based in part on the work of the Independent JPEG Group.
+
+Bundled third-party code
+========================
+
+Each library is pinned in tools/vendor/manifest.tsv (release, commit and
+archive SHA-256), trimmed to the files in tools/vendor/<library>.files, and
+patched only by the patches named below. tools/vendor/verify checks the
+vendored tree against tools/vendor/checksums.sha256. zupix_info() reports
+the same versions, commits and patches at run time. The full licence texts
+are installed with the package under licenses/.
+
+src/vendor/wuffs/ (Wuffs v0.4.0-alpha.12, commit 7f70dda9)
+---------------------------------------------------------
+
+The single-file C release, release/c/wuffs-v0.4.c, from
+https://github.com/google/wuffs.
+
+  Copyright 2017 The Wuffs Authors.
+  Copyright 2023 The Wuffs Authors.
+
+Distributed under the terms of both the MIT license and the Apache License,
+Version 2.0 (the "License"): zupix redistributes it under both and complies
+with both. The texts are src/vendor/wuffs/LICENSE, LICENSE-MIT and
+LICENSE-APACHE (installed as licenses/wuffs-LICENSE*). Upstream ships no
+NOTICE file.
+
+Modified by two patches, and wuffs-v0.4.c carries a notice saying so, as
+section 4(b) of the Apache License requires:
+
+  0001-drop-diagnostic-pragmas.patch  removes every "#pragma GCC
+      diagnostic" and "#pragma clang diagnostic" line, which R CMD check
+      reports;
+  0002-drop-unused-swizzle.patch  deletes the one function nothing calls,
+      wuffs_private_impl__swizzle_swap_rgbx_bgrx_64, which without those
+      pragmas is a -Wunused-function warning.
+
+No other change.
+
+src/vendor/libjpeg-turbo/ (libjpeg-turbo 3.2.1, commit 7b499378)
+---------------------------------------------------------------
+
+The compression half of the libjpeg API library, from
+https://github.com/libjpeg-turbo/libjpeg-turbo: the source files that
+compress and the headers they include. No decompressor, TurboJPEG API,
+SIMD code, command-line program or build system is included.
+
+  Copyright (C) 1991-2020, Thomas G. Lane, Guido Vollbeding.
+  Copyright (C) 2009-2026, D. R. Commander.
+  Copyright (C) 1999, Ken Murchison.
+  Copyright (C) 1999-2006, MIYASAKA Masaru.
+  Copyright (C) 1997-1998, Thomas G. Lane, Todd Newman.
+  Copyright (C) 2014, Olle Liljenzin.
+  Copyright (C) 2015, 2016, 2018, 2022, Matthieu Darbois.
+  Copyright (C) 2015, Google, Inc.
+  Copyright (C) 2018, Matthias Räncker.
+  Copyright (C) 2020, Arm Limited.
+  Copyright (C) 2021, Alex Richardson.
+  Copyright (C) 2022, Felix Hanau.
+  Copyright (C) 2018-2023 Randy <randy408@protonmail.com>.
+
+The libjpeg API library is under the IJG License: src/vendor/libjpeg-turbo/
+README.ijg (installed as licenses/libjpeg-turbo-README.ijg), with
+libjpeg-turbo's own summary in LICENSE.md (licenses/libjpeg-turbo-LICENSE.md).
+This software is based in part on the work of the Independent JPEG Group.
+
+As the IJG License requires, the changes to the original files are these:
+
+  0001-no-stdio-or-exit.patch  changes jerror.c only. error_exit() calls
+      zupix's zpx_int_jpeg_error_exit() (src/zpx_jpeg_error.c), which
+      returns control to the zupix encoder that called libjpeg, instead of
+      calling exit(); output_message() discards the message instead of
+      printing it to stderr. An R package may do neither. jerror.c's header
+      comment records the change.
+
+No other file is changed. jconfig.h, jconfigint.h and jversion.h, which
+libjpeg-turbo's CMake build generates, are not vendored; zupix's own
+versions are in src/jpeg-config/.
+
+src/vendor/libwebp/ (libwebp 1.6.0, commit 4fa21912)
+---------------------------------------------------
+
+The encoder half of libwebp, from
+https://chromium.googlesource.com/webm/libwebp: src/enc, src/utils, the
+encoder's part of src/dsp with its SIMD variants, sharpyuv, and the
+src/dec and src/webp headers they include. No decoder, mux or demux
+library, example or build system is included.
+
+  Copyright (c) 2010, Google Inc. All rights reserved.
+
+Under the BSD 3-Clause License, src/vendor/libwebp/COPYING (installed as
+licenses/libwebp-COPYING), with Google's additional patent grant in
+src/vendor/libwebp/PATENTS (licenses/libwebp-PATENTS). The authors are
+listed in src/vendor/libwebp/AUTHORS (licenses/libwebp-AUTHORS).
+
+Not modified.
+
+src/vendor/qoi/ (qoi.h, commit ffb2d2cb)
+---------------------------------------
+
+The single header from https://github.com/phoboslab/qoi, which has no
+release tags; the commit is the pin.
+
+  Copyright (c) 2021, 2022 Dominic Szablewski.
+
+Under the MIT License, src/vendor/qoi/LICENSE (installed as
+licenses/qoi-LICENSE).
+
+Not modified.
