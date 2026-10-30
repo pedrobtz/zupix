@@ -36,9 +36,11 @@ Language: en-GB
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.1.1
 Suggests: 
+    jpeg,
     png,
     qoi,
     testthat (>= 3.0.0),
+    webp,
     withr
 Config/testthat/edition: 3
 URL: https://pedrobtz.github.io/zupix/, https://github.com/pedrobtz/zupix

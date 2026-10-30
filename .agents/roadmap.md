@@ -19,7 +19,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zupix/issues/2) | [#15](https://github.com/pedrobtz/zupix/pull/15) | 2026-10-30 |
 | 1 | [Vendored codecs and the Wuffs gate](#stage-1--vendored-codecs-and-the-wuffs-gate) | full | [#3](https://github.com/pedrobtz/zupix/issues/3) | [#16](https://github.com/pedrobtz/zupix/pull/16) | 2026-10-30 |
 | 2 | [Decoding PNG and QOI](#stage-2--decoding-png-and-qoi) | full | [#4](https://github.com/pedrobtz/zupix/issues/4) | [#17](https://github.com/pedrobtz/zupix/pull/17) | 2026-10-30 |
-| 3 | [JPEG, WebP and metadata](#stage-3--jpeg-webp-and-metadata) | full | [#5](https://github.com/pedrobtz/zupix/issues/5) | | |
+| 3 | [JPEG, WebP and metadata](#stage-3--jpeg-webp-and-metadata) | full | [#5](https://github.com/pedrobtz/zupix/issues/5) | [#18](https://github.com/pedrobtz/zupix/pull/18) | 2026-10-30 |
 | 4 | [Lossless encoders](#stage-4--lossless-encoders) | quick | [#6](https://github.com/pedrobtz/zupix/issues/6) | | |
 | 5 | [Lossy encoders and metadata embedding](#stage-5--lossy-encoders-and-metadata-embedding) | quick | [#7](https://github.com/pedrobtz/zupix/issues/7) | | |
 | 6 | [C table](#stage-6--c-table) | full | [#8](https://github.com/pedrobtz/zupix/issues/8) | | |
@@ -208,6 +208,25 @@ pixel decode.
 - `orient = TRUE` and `pix_orient()` (§6.3).
 - `zupix_unsupported_error` for 12-bit, arithmetic, hierarchical and
   lossless JPEG.
+
+**Recorded 2026-10-30.** Deviations: (1) `jpeg::readJPEG()` does not agree
+within 2 levels on colour JPEG: Wuffs and libjpeg-turbo use different fancy
+chroma-upsampling filters. Grey is exact. On a 320 x 240 4:2:0 image 99.9%
+of samples are within 2 and the worst is 4; on the 16 x 12 test fixture,
+where edges dominate, the worst is 9. The tolerance is recorded per file in
+`test-jpeg-webp.R`, as design §9 allows. (2) Wuffs decodes still WebP only,
+so an animated WebP's first frame is rebuilt as a still file and decoded
+when it covers the canvas; a smaller first frame is
+`zupix_unsupported_error`, since compositing is not implemented. (3) An
+EXIF block that cannot be read gives orientation `NA` rather than an
+error, so a damaged EXIF never blocks the pixels; `pix_exif()` still
+returns its bytes. (4) `src/zpx_scan.c` replaces Stage 2's minimal PNG
+walk. (5) No progressive, CMYK or YCCK JPEG fixture exists yet (neither
+the jpeg nor the webp package writes one); Stage 7's corpora cover them.
+(6) `pix_info()` applies only `max_metadata` and the input cap, so it can
+report an image `pix_read()` would refuse. Beyond the tests, a local
+harness ran 20,369 truncations and corruptions of 13 files through the C
+core under ASan and UBSan with no finding; Stage 7 turns that into `fuzz/`.
 
 **Exit criteria.**
 

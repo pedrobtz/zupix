@@ -175,3 +175,146 @@ declared_png <- function(width, height) {
     png_chunk("IEND")
   )
 }
+
+# ---- metadata splicing ------------------------------------------------------
+
+fixture <- function(name) {
+  readBin(
+    test_path("fixtures", name),
+    "raw",
+    file.size(test_path("fixtures", name))
+  )
+}
+
+be16 <- function(x) as.raw(c(x %/% 256, x %% 256))
+le16 <- function(x) as.raw(c(x %% 256, x %/% 256))
+le24 <- function(x) as.raw(c(x %% 256, (x %/% 256) %% 256, x %/% 65536))
+le32 <- function(x) rev(be32(x))
+
+# A minimal EXIF block (TIFF header onward) holding only IFD0's orientation.
+exif_block <- function(orientation, big_endian = FALSE) {
+  if (big_endian) {
+    c(
+      charToRaw("MM"),
+      be16(42),
+      be32(8),
+      be16(1),
+      be16(0x0112),
+      be16(3),
+      be32(1),
+      be16(orientation),
+      be16(0),
+      be32(0)
+    )
+  } else {
+    c(
+      charToRaw("II"),
+      le16(42),
+      le32(8),
+      le16(1),
+      le16(0x0112),
+      le16(3),
+      le32(1),
+      le16(orientation),
+      le16(0),
+      le32(0)
+    )
+  }
+}
+
+# A JPEG segment, and a JPEG with segments inserted right after SOI.
+jpeg_segment <- function(marker, payload) {
+  c(as.raw(c(0xff, marker)), be16(length(payload) + 2), payload)
+}
+jpeg_with <- function(jpg, ...) {
+  c(jpg[1:2], unlist(list(...)), jpg[-(1:2)])
+}
+jpeg_exif <- function(block) {
+  jpeg_segment(0xe1, c(charToRaw("Exif"), as.raw(c(0, 0)), block))
+}
+# APP2 ICC_PROFILE segments for `profile` split into `parts`, numbered
+# `seq` (1..n by default) and declaring `count` segments.
+jpeg_icc <- function(profile, parts = 1L, seq = seq_len(parts), count = parts) {
+  pieces <- if (parts == 1L) {
+    list(profile)
+  } else {
+    split(profile, cut(seq_along(profile), parts, labels = FALSE))
+  }
+  lapply(seq_along(pieces), function(i) {
+    jpeg_segment(
+      0xe2,
+      c(charToRaw("ICC_PROFILE"), as.raw(c(0, seq[[i]], count)), pieces[[i]])
+    )
+  })
+}
+
+# A WebP chunk, padded to even length.
+webp_chunk <- function(fourcc, payload) {
+  c(
+    charToRaw(fourcc),
+    le32(length(payload)),
+    payload,
+    if (length(payload) %% 2) as.raw(0)
+  )
+}
+riff <- function(chunks) {
+  body <- c(charToRaw("WEBP"), unlist(chunks))
+  c(charToRaw("RIFF"), le32(length(body)), body)
+}
+# The bitstream chunk (VP8 or VP8L) of a simple WebP file.
+webp_bitstream <- function(webp) webp[-(1:12)]
+# An extended WebP: VP8X with `flags` and the canvas size, then chunks.
+webp_extended <- function(flags, width, height, chunks) {
+  vp8x <- webp_chunk(
+    "VP8X",
+    c(as.raw(c(flags, 0, 0, 0)), le24(width - 1), le24(height - 1))
+  )
+  riff(c(list(vp8x), chunks))
+}
+# An animated WebP whose frames are given as their chunk bytes.
+webp_animated <- function(
+  width,
+  height,
+  frames,
+  x = 0L,
+  y = 0L,
+  fw = width,
+  fh = height
+) {
+  anim <- webp_chunk("ANIM", c(as.raw(c(255, 255, 255, 255)), le16(0)))
+  anmf <- lapply(frames, function(f) {
+    webp_chunk(
+      "ANMF",
+      c(
+        le24(x %/% 2),
+        le24(y %/% 2),
+        le24(fw - 1),
+        le24(fh - 1),
+        le24(100),
+        as.raw(0),
+        f
+      )
+    )
+  })
+  webp_extended(0x02, width, height, c(list(anim), anmf))
+}
+
+# An APNG's acTL and the fcTL that makes IDAT its first frame.
+apng_chunks <- function(width, height, frames = 1L) {
+  list(
+    png_chunk("acTL", c(be32(frames), be32(0))),
+    png_chunk(
+      "fcTL",
+      c(
+        be32(0),
+        be32(width),
+        be32(height),
+        be32(0),
+        be32(0),
+        be16(1),
+        be16(10),
+        as.raw(c(0, 0))
+      )
+    )
+  )
+}
