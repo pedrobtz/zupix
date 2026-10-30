@@ -22,7 +22,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | 3 | [JPEG, WebP and metadata](#stage-3--jpeg-webp-and-metadata) | full | [#5](https://github.com/pedrobtz/zupix/issues/5) | [#18](https://github.com/pedrobtz/zupix/pull/18) | 2026-10-30 |
 | 4 | [Lossless encoders](#stage-4--lossless-encoders) | quick | [#6](https://github.com/pedrobtz/zupix/issues/6) | [#19](https://github.com/pedrobtz/zupix/pull/19) | 2026-10-30 |
 | 5 | [Lossy encoders and metadata embedding](#stage-5--lossy-encoders-and-metadata-embedding) | quick | [#7](https://github.com/pedrobtz/zupix/issues/7) | [#20](https://github.com/pedrobtz/zupix/pull/20) | 2026-10-30 |
-| 6 | [C table](#stage-6--c-table) | full | [#8](https://github.com/pedrobtz/zupix/issues/8) | | |
+| 6 | [C table](#stage-6--c-table) | full | [#8](https://github.com/pedrobtz/zupix/issues/8) | [#21](https://github.com/pedrobtz/zupix/pull/21) | 2026-10-30 |
 | 7 | [Conformance, hostile input and fuzzing](#stage-7--conformance-hostile-input-and-fuzzing) | quick | [#9](https://github.com/pedrobtz/zupix/issues/9) | | |
 | 8 | [Documentation and benchmarks](#stage-8--documentation-and-benchmarks) | quick | [#10](https://github.com/pedrobtz/zupix/issues/10) | | |
 | 9 | [Full CI](#stage-9--full-ci) | full | [#11](https://github.com/pedrobtz/zupix/issues/11) | | |
@@ -348,6 +348,21 @@ encode from C.
   three OSes.
 - `test-abi.R`: the full symbol table exports `R_init_zupix` only and no
   `wuffs_`, `jpeg_`, `jinit`, `WebP` or `qoi_` symbol.
+
+**Recorded 2026-10-30.** Decided here, where design §16 left it open: the
+per-format option structs (`zpx_png_opts`, `zpx_jpeg_opts`,
+`zpx_webp_opts`, `zpx_qoi_opts`, each starting with `struct_size`, `NULL`
+for the defaults); `metadata()` selects with `ZPX_META_ICC` and
+`ZPX_META_EXIF`; `NULL` limits mean zupix's defaults; `decode()` adds
+channels and depth but refuses grey from colour or dropped alpha, as the R
+API does. The core now takes its public types from `zupix.h`, so the two
+cannot drift. Found and fixed: the JPEG encoder kept its sink-failure flag
+in an automatic variable changed between `setjmp()` and `longjmp()`
+(indeterminate in C), which the fixture's failing-sink test caught as
+`ZPX_ERR_ENCODE` instead of `ZPX_ERR_SINK`; the libjpeg-turbo context now
+lives in one heap block. Locally, the table ran 1,056 encode and decode
+calls across every format and pixel layout under ASan and UBSan, and
+`tools/zupixtest` passed 46 tests on macOS.
 
 **Exit criteria.**
 

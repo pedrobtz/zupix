@@ -5,6 +5,7 @@
 #include <R_ext/Visibility.h>
 
 #include "zpx_r.h"
+#include "zpx_table.h"
 
 static const R_CallMethodDef call_methods[] = {
   {"zpx_r_versions", (DL_FUNC) &zpx_r_versions, 0},
@@ -19,9 +20,19 @@ static const R_CallMethodDef call_methods[] = {
 };
 
 /* The only symbol the shared object exports: everything else is reached
- * through the registration table (design §3). */
+ * through a registration table, .Call entry points through
+ * R_registerRoutines() and the C table (design §7) through
+ * R_RegisterCCallable(). */
 void attribute_visible R_init_zupix(DllInfo *dll) {
+  /* A function pointer converted through a union rather than a cast, which
+   * -Wcast-function-type-mismatch reports. */
+  union {
+    const zupix_api_v1 *(*get)(uint32_t);
+    DL_FUNC fn;
+  } api;
   R_registerRoutines(dll, NULL, call_methods, NULL, NULL);
+  api.get = zupix_get_api;
+  R_RegisterCCallable("zupix", "zupix_get_api", api.fn);
   R_useDynamicSymbols(dll, FALSE);
   R_forceSymbols(dll, TRUE);
 }
