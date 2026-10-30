@@ -92,7 +92,8 @@ tools/vendor/verify          # vendored tree == manifest + patches (offline)
 tools/vendor/fetch [source]  # re-vendor from tools/vendor/manifest.tsv
 tools/check-symbols          # zupix.so imports no stdio/exit/abort/getenv/RNG,
                              # exports only R_init_zupix (add --canary)
-tools/run-benchmarks         # design §10, into .agents/benchmarks.md
+tools/run-benchmarks         # design §10, into .agents/benchmarks.md (from a
+                             # built tarball: load_all() leaves -O0 objects)
 ```
 
 ## Architecture

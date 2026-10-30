@@ -24,7 +24,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | 5 | [Lossy encoders and metadata embedding](#stage-5--lossy-encoders-and-metadata-embedding) | quick | [#7](https://github.com/pedrobtz/zupix/issues/7) | [#20](https://github.com/pedrobtz/zupix/pull/20) | 2026-10-30 |
 | 6 | [C table](#stage-6--c-table) | full | [#8](https://github.com/pedrobtz/zupix/issues/8) | [#21](https://github.com/pedrobtz/zupix/pull/21) | 2026-10-30 |
 | 7 | [Conformance, hostile input and fuzzing](#stage-7--conformance-hostile-input-and-fuzzing) | quick | [#9](https://github.com/pedrobtz/zupix/issues/9) | [#22](https://github.com/pedrobtz/zupix/pull/22) | 2026-10-30 |
-| 8 | [Documentation and benchmarks](#stage-8--documentation-and-benchmarks) | quick | [#10](https://github.com/pedrobtz/zupix/issues/10) | | |
+| 8 | [Documentation and benchmarks](#stage-8--documentation-and-benchmarks) | quick | [#10](https://github.com/pedrobtz/zupix/issues/10) | | 2026-10-31 |
 | 9 | [Full CI](#stage-9--full-ci) | full | [#11](https://github.com/pedrobtz/zupix/issues/11) | | |
 | 10 | [v0.1.0 readiness](#stage-10--v010-readiness) | full | [#12](https://github.com/pedrobtz/zupix/issues/12) | | |
 
@@ -461,6 +461,23 @@ truncated and corrupt input.
 - `tools/run-benchmarks` against `png`, `jpeg`, `webp` and `qoi` into
   `.agents/benchmarks.md`.
 - pkgdown reference index grouped by decoding, metadata and encoding.
+
+**Recorded 2026-10-31.** Every design §10 target is met but one, PNG
+decode at 1.15× `png::readPNG()` against "at least as fast"; it is
+rewritten in design §10 to within 1.2×, with the reason (Wuffs's decode
+matches libpng; the rest is reading the file into memory first).
+Measuring found three real costs, now fixed: the PNG writer used zlib's
+default strategy rather than libpng's `Z_FILTERED` (2.7× slower, now
+1.26×); encoder input was validated and converted by whole-array passes
+in R (about 1 s and 800 MB on 12 megapixels), now done in the C pass that
+interleaves; and `pix_read()` copied its result when setting `dim`, and
+read files in chunks. The first measurements were also wrong for a reason
+worth keeping: `R CMD INSTALL .` reused `-O0` objects `load_all()` had left
+in `src/`, so `tools/run-benchmarks` now installs from a built tarball.
+The README (`README.Rmd`) carries the Independent JPEG Group
+acknowledgement; the article is `vignettes/articles/zupix.Rmd`, a pkgdown
+article, not an installed vignette. It states the Wuffs differences
+Stage 7 found.
 
 **Exit criteria.**
 
