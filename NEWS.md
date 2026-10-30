@@ -6,9 +6,10 @@
   Adam7), JPEG (baseline and progressive; grey, YCbCr, CMYK and YCCK to RGB),
   WebP (lossy, lossy with alpha, lossless) and QOI into a `nativeRaster`, a
   double array in `[0, 1]` or an integer array with a `bits` attribute, from
-  a path, raw vector or connection. `bits` and `channels` force the depth and add channels.
-  `pix_format()` names an image's format from its signature. Animated PNG
-  and WebP decode their first frame, flagged by an `animated` attribute.
+  a path, raw vector or connection. `bits` and `channels` force the depth
+  and add channels. `pix_format()` names an image's format from its
+  signature. Animated PNG and WebP decode their first frame, flagged by an
+  `animated` attribute.
 
 * `pix_info()` reports format, size, depth, colour type, alpha,
   interlacing, animation, density, EXIF orientation, the PNG colour chunks
