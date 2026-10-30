@@ -21,17 +21,53 @@
 
 #include "zpx_core.h"
 
+/* A PNG or QOI decoder. Its functions are called directly, never through
+ * Wuffs's generic wuffs_base__image_decoder: that interface calls them
+ * through a pointer whose `self` type is void *, which clang's
+ * -fsanitize=function (part of CRAN's UBSan check) reports as undefined
+ * behaviour. */
 typedef struct {
-  wuffs_base__image_decoder *dec;
+  zpx_format format;
   void *mem;
 } zpx_decoder;
+
+static wuffs_base__status decode_image_config(zpx_decoder *d,
+                                              wuffs_base__image_config *ic,
+                                              wuffs_base__io_buffer *src) {
+  if (d->format == ZPX_FMT_PNG)
+    return wuffs_png__decoder__decode_image_config(
+        (wuffs_png__decoder *) d->mem, ic, src);
+  return wuffs_qoi__decoder__decode_image_config(
+      (wuffs_qoi__decoder *) d->mem, ic, src);
+}
+
+static uint64_t workbuf_len(zpx_decoder *d) {
+  if (d->format == ZPX_FMT_PNG)
+    return wuffs_png__decoder__workbuf_len((wuffs_png__decoder *) d->mem)
+        .max_incl;
+  return wuffs_qoi__decoder__workbuf_len((wuffs_qoi__decoder *) d->mem)
+      .max_incl;
+}
+
+static wuffs_base__status decode_frame(zpx_decoder *d,
+                                       wuffs_base__pixel_buffer *pb,
+                                       wuffs_base__io_buffer *src,
+                                       wuffs_base__slice_u8 work) {
+  if (d->format == ZPX_FMT_PNG)
+    return wuffs_png__decoder__decode_frame(
+        (wuffs_png__decoder *) d->mem, pb, src, WUFFS_BASE__PIXEL_BLEND__SRC,
+        work, NULL);
+  return wuffs_qoi__decoder__decode_frame(
+      (wuffs_qoi__decoder *) d->mem, pb, src, WUFFS_BASE__PIXEL_BLEND__SRC,
+      work, NULL);
+}
 
 static zpx_status new_decoder(zpx_format format, zpx_decoder *d,
                               const char **detail) {
   size_t size;
   wuffs_base__status st;
 
-  d->dec = NULL;
+  d->format = format;
   d->mem = NULL;
   switch (format) {
   case ZPX_FMT_PNG: size = sizeof__wuffs_png__decoder(); break;
@@ -45,13 +81,9 @@ static zpx_status new_decoder(zpx_format format, zpx_decoder *d,
   if (format == ZPX_FMT_PNG) {
     st = wuffs_png__decoder__initialize((wuffs_png__decoder *) d->mem, size,
                                         WUFFS_VERSION, 0);
-    d->dec = wuffs_png__decoder__upcast_as__wuffs_base__image_decoder(
-        (wuffs_png__decoder *) d->mem);
   } else {
     st = wuffs_qoi__decoder__initialize((wuffs_qoi__decoder *) d->mem, size,
                                         WUFFS_VERSION, 0);
-    d->dec = wuffs_qoi__decoder__upcast_as__wuffs_base__image_decoder(
-        (wuffs_qoi__decoder *) d->mem);
   }
   if (!wuffs_base__status__is_ok(&st)) {
     *detail = wuffs_base__status__message(&st);
@@ -89,6 +121,8 @@ static zpx_status probe(const uint8_t *buf, size_t len,
   uint64_t pixels;
 
   memset(out, 0, sizeof *out);
+  d->format = ZPX_FMT_UNKNOWN;
+  d->mem = NULL; /* the callers free it on every path */
   out->format = zpx_sniff(buf, len);
   if (out->format == ZPX_FMT_UNKNOWN) {
     out->detail = "not a PNG, JPEG, WebP or QOI signature";
@@ -99,15 +133,14 @@ static zpx_status probe(const uint8_t *buf, size_t len,
 
   *src = wuffs_base__ptr_u8__reader((uint8_t *) buf, len, true);
   memset(ic, 0, sizeof *ic);
-  st = wuffs_base__image_decoder__decode_image_config(d->dec, ic, src);
+  st = decode_image_config(d, ic, src);
   if (!wuffs_base__status__is_ok(&st)) {
     out->detail = wuffs_base__status__message(&st);
     return wuffs_failure(&st);
   }
   out->width = wuffs_base__pixel_config__width(&ic->pixcfg);
   out->height = wuffs_base__pixel_config__height(&ic->pixcfg);
-  out->workbuf_len =
-      wuffs_base__image_decoder__workbuf_len(d->dec).max_incl;
+  out->workbuf_len = workbuf_len(d);
 
   if (out->format == ZPX_FMT_PNG) {
     zpx_png_header h;
@@ -224,10 +257,9 @@ zpx_status zpx_int_decode_image(const uint8_t *buf, size_t len,
     s = ZPX_ERR_ARGUMENT;
     goto done;
   }
-  st = wuffs_base__image_decoder__decode_frame(
-      d.dec, &pb, &src, WUFFS_BASE__PIXEL_BLEND__SRC,
-      wuffs_base__make_slice_u8((uint8_t *) work, (size_t) out->workbuf_len),
-      NULL);
+  st = decode_frame(
+      &d, &pb, &src,
+      wuffs_base__make_slice_u8((uint8_t *) work, (size_t) out->workbuf_len));
   if (!wuffs_base__status__is_ok(&st)) {
     /* A truncated or corrupt file is an error, never a partial image. */
     out->detail = wuffs_base__status__message(&st);
