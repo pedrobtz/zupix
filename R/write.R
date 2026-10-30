@@ -107,13 +107,8 @@ pix_write_png <- function(
 #' @export
 pix_write_qoi <- function(x, file = NULL, colourspace = c("srgb", "linear")) {
   colourspace <- match_arg(colourspace, c("srgb", "linear"), "colourspace")
+  # 16-bit input is refused in C: QOI is 8-bit.
   px <- prepare_pixels(x, NULL)
-  if (px$bits != 8L) {
-    zpx_input_error(
-      "x",
-      "QOI is 8-bit; read or convert the image with `bits = 8L`."
-    )
-  }
   opts <- encode_opts(colourspace = as.integer(colourspace == "linear"))
   encode(px, "qoi", opts, file)
 }
@@ -255,9 +250,10 @@ encode <- function(px, format, opts, file, call = sys.call(-1L)) {
   res <- .Call(
     zpx_r_encode,
     px$pixels,
-    px$native,
+    px$mode,
     px$dims,
-    px$bits,
+    px$stored,
+    px$target,
     match(format, zpx_formats),
     opts
   )
@@ -281,9 +277,10 @@ encode <- function(px, format, opts, file, call = sys.call(-1L)) {
   invisible(file)
 }
 
-# The image as the C encoder takes it: a nativeRaster's integers, or an
-# integer vector holding the column-major array, with dims (height, width,
-# channels) and the depth to write.
+# The image as the C encoder takes it: the caller's own vector (no copy),
+# how to read it, its dims (height, width, channels) and depths. Missing,
+# non-integer and out-of-range samples are refused in C, in the pass that
+# converts them, rather than by whole-array passes here.
 prepare_pixels <- function(x, bits, call = sys.call(-1L)) {
   if (inherits(x, "nativeRaster")) {
     if (!is.null(bits) && bits != 8L) {
@@ -291,14 +288,17 @@ prepare_pixels <- function(x, bits, call = sys.call(-1L)) {
     }
     d <- dim(x)
     return(list(
-      pixels = as.integer(unclass(x)),
-      native = TRUE,
+      pixels = x,
+      mode = 0L,
       dims = c(d[[1L]], d[[2L]], 4L),
-      bits = 8L
+      stored = 8L,
+      target = 8L
     ))
   }
   d <- dim(x)
-  if (!(is.numeric(x) && (length(d) == 2L || length(d) == 3L))) {
+  if (
+    !((is.double(x) || is.integer(x)) && (length(d) == 2L || length(d) == 3L))
+  ) {
     zpx_input_error(
       "x",
       "`x` must be a nativeRaster, or a numeric matrix or 3-dimensional array.",
@@ -315,47 +315,29 @@ prepare_pixels <- function(x, bits, call = sys.call(-1L)) {
       call = call
     )
   }
-  if (anyNA(x)) {
-    zpx_input_error("x", "`x` has missing values.", call = call)
+  stored <- attr(x, "bits")
+  if (
+    !is.null(stored) &&
+      !identical(as.integer(stored), 8L) &&
+      !identical(as.integer(stored), 16L)
+  ) {
+    zpx_input_error(
+      "x",
+      "`x`'s `bits` attribute must be 8L or 16L.",
+      call = call
+    )
   }
-  if (is.double(x) && is.null(attr(x, "bits"))) {
-    bits <- bits %||% 8L
-    v <- as.integer(round(pmin(pmax(as.vector(x), 0), 1) * (2^bits - 1)))
-  } else {
-    stored <- attr(x, "bits")
-    v <- as.vector(x)
-    if (any(v != trunc(v))) {
-      zpx_input_error("x", "`x` holds non-integer sample values.", call = call)
-    }
-    if (is.null(stored)) {
-      stored <- if (all(v <= 255)) 8L else NA_integer_
-      if (is.na(stored)) {
-        zpx_input_error(
-          "bits",
-          "`x` has values above 255 but no `bits` attribute; set it to 16L.",
-          call = call
-        )
-      }
-    }
-    if (any(v < 0) || any(v > 2^stored - 1)) {
-      zpx_input_error(
-        "x",
-        sprintf("`x` has values outside 0 to %s.", 2^stored - 1),
-        call = call
-      )
-    }
-    bits <- bits %||% as.integer(stored)
-    v <- as.integer(v)
-    if (stored == 16L && bits == 8L) {
-      v <- (v + 128L) %/% 257L
-    }
-    if (stored == 8L && bits == 16L) v <- v * 257L
-  }
+  unit <- is.double(x) && is.null(stored)
   list(
-    pixels = v,
-    native = FALSE,
+    pixels = x,
+    mode = if (unit) 1L else 2L,
     dims = as.integer(dims),
-    bits = as.integer(bits)
+    stored = if (is.null(stored)) NA_integer_ else as.integer(stored),
+    target = if (is.null(bits)) {
+      if (unit) 8L else NA_integer_
+    } else {
+      as.integer(bits)
+    }
   )
 }
 
