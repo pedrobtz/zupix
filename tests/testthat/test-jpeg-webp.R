@@ -117,3 +117,30 @@ test_that("webp::read_webp() agrees exactly on lossless files", {
     expect_identical(as.vector(ours), as.vector(theirs[,, seq_len(ch)]))
   }
 })
+
+test_that("an extended WebP with a VP8L bitstream decodes", {
+  # Wuffs v0.4.0-alpha.12 fails on VP8L inside a VP8X container, with or
+  # without the alpha flag the WebP container sets for transparency, though
+  # the same VP8L chunk decodes on its own; zupix decodes such files from a
+  # rebuilt simple-format copy.
+  for (name in c("lossless.webp", "lossless-alpha.webp")) {
+    w <- fixture(name)
+    for (flags in c(0x00, 0x10, 0x08)) {
+      if (flags == 0x10 && name == "lossless.webp") {
+        next
+      }
+      ext <- webp_extended(flags, 16L, 12L, list(webp_bitstream(w)))
+      expect_identical(
+        pix_read(ext, as = "integer"),
+        pix_read(w, as = "integer")
+      )
+    }
+  }
+  ext <- webp_extended(
+    0x10,
+    16L,
+    12L,
+    list(webp_bitstream(fixture("lossless-alpha.webp")))
+  )
+  expect_true(pix_info(ext)$alpha)
+})

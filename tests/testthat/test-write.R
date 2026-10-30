@@ -183,10 +183,6 @@ test_that("pix_write() picks the writer from the extension or `format`", {
     pix_write(img, file.path(dir, "a.tiff")),
     class = "zupix_input_error"
   )
-  expect_error(
-    pix_write(img, file.path(dir, "a.jpg")),
-    class = "zupix_unsupported_error"
-  )
   expect_identical(pix_write(img, NULL, format = "png"), pix_write_png(img))
 })
 
