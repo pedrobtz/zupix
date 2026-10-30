@@ -185,10 +185,13 @@ WEBP_OBJECTS = \
 # zpx_wuffs.c and zpx_qoi.c compile the single-file Wuffs and qoi.h
 # implementations; nothing under vendor/wuffs or vendor/qoi is listed here.
 OBJECTS = \
+	zpx_decode.o \
 	zpx_init.o \
 	zpx_jpeg_error.o \
+	zpx_png.o \
 	zpx_qoi.o \
 	zpx_r.o \
+	zpx_sniff.o \
 	zpx_webp.o \
 	zpx_wuffs.o \
 	$(JPEG_OBJECTS) \
