@@ -200,3 +200,25 @@ test_that("encoding is deterministic", {
     pix_write_qoi(random_image(8L, 8L, 4L, 8L))
   )
 })
+
+test_that("lossless round trips hold on many random images", {
+  # Design §12 asks for 10^4 per format and depth; that runs where
+  # ZUPIX_ROUNDTRIPS=10000 (hardening.yaml). The default keeps CRAN quick.
+  n <- as.integer(Sys.getenv("ZUPIX_ROUNDTRIPS", "25"))
+  withr::local_seed(12L)
+  for (i in seq_len(n)) {
+    h <- sample.int(24L, 1L)
+    w <- sample.int(24L, 1L)
+    ch <- sample.int(4L, 1L)
+    for (bits in c(8L, 16L)) {
+      img <- random_image(h, w, ch, bits, seed = i * 2L + bits)
+      expect_identical(pix_read(pix_write_png(img), as = "integer"), img)
+    }
+    rgb <- random_image(h, w, sample(3:4, 1L), 8L, seed = i)
+    expect_identical(pix_read(pix_write_qoi(rgb), as = "integer"), rgb)
+    expect_identical(
+      pix_read(pix_write_webp(rgb, lossless = TRUE), as = "integer"),
+      rgb
+    )
+  }
+})
