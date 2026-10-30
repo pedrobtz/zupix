@@ -1,0 +1,265 @@
+# Getting started with zupix
+
+``` r
+
+library(zupix)
+f <- system.file("extdata", "gradient.png", package = "zupix")
+```
+
+zupix decodes PNG, JPEG, WebP and QOI, and encodes the same four, with
+every codec compiled into the package. This article goes through the
+shapes it reads into, the metadata it reports, the writers, the limits
+that guard against hostile files, the C interface for other packages,
+how fast it is, and where its output differs from the reference
+decoders.
+
+## Three shapes
+
+[`pix_read()`](https://pedrobtz.github.io/zupix/reference/pix_read.md)
+returns one of three shapes, chosen with `as`.
+
+A `nativeRaster` (the default) is 8-bit RGBA packed one pixel per
+integer, as `png::readPNG(native = TRUE)` returns it. It is the smallest
+shape and draws directly with
+[`grid::grid.raster()`](https://rdrr.io/r/grid/grid.raster.html) or
+[`graphics::rasterImage()`](https://rdrr.io/r/graphics/rasterImage.html).
+
+``` r
+
+native <- pix_read(f)
+class(native)
+#> [1] "nativeRaster"
+dim(native)
+#> [1] 32 48
+```
+
+A double array holds values in `[0, 1]`, as
+[`png::readPNG()`](https://rdrr.io/pkg/png/man/readPNG.html) returns
+them: `height x width x channels`, or a matrix for a grey image.
+
+``` r
+
+dbl <- pix_read(f, as = "double")
+dim(dbl)
+#> [1] 32 48  3
+range(dbl)
+#> [1] 0 1
+```
+
+An integer array holds the sample values themselves, with their depth in
+a `bits` attribute: `0..255` at 8 bits, `0..65535` at 16.
+
+``` r
+
+int <- pix_read(f, as = "integer")
+attr(int, "bits")
+#> [1] 8
+```
+
+`bits` forces a depth, and `channels` adds channels: grey becomes RGB,
+and an opaque alpha can be added. Removing a channel is refused, because
+turning colour into grey or dropping transparency is a colour decision
+zupix leaves to you.
+
+``` r
+
+dim(pix_read(f, as = "integer", channels = 4L))
+#> [1] 32 48  4
+attr(pix_read(f, as = "integer", bits = 16L), "bits")
+#> [1] 16
+pix_read(f, as = "integer", channels = 1L)
+#> Error in `pix_read()`:
+#> ! `channels` would remove channels the image has.
+```
+
+## Metadata
+
+[`pix_info()`](https://pedrobtz.github.io/zupix/reference/pix_info.md)
+reads an image’s header and metadata without decoding pixels: format,
+size, depth, colour type, transparency, interlacing, animation, density,
+EXIF orientation, PNG’s colour chunks, and whether an ICC profile or
+EXIF data is present. It takes any number of paths and returns a row for
+each.
+
+``` r
+
+pix_info(f)
+#>   format width height bits colour_type alpha interlaced animated density_x
+#> 1    png    48     32    8         rgb FALSE      FALSE    FALSE        NA
+#>   density_y density_unit orientation gamma srgb chrm cicp   icc  exif
+#> 1        NA           NA          NA    NA   NA NULL NULL FALSE FALSE
+#>   qoi_linear
+#> 1         NA
+```
+
+[`pix_icc()`](https://pedrobtz.github.io/zupix/reference/pix_icc.md) and
+[`pix_exif()`](https://pedrobtz.github.io/zupix/reference/pix_icc.md)
+return the ICC profile and the EXIF block as raw vectors, or `NULL`.
+zupix never applies a profile: pass it to a colour-management package.
+
+The EXIF orientation says how a camera was held. Pixels come back as
+stored; `pix_read(orient = TRUE)` or
+[`pix_orient()`](https://pedrobtz.github.io/zupix/reference/pix_orient.md)
+rotates or flips them losslessly.
+
+``` r
+
+small <- int[1:2, 1:3, 1]
+small
+#>      [,1] [,2] [,3]
+#> [1,]    0    5   11
+#> [2,]    0    5   11
+pix_orient(small, 6L) # 90 degrees clockwise
+#>      [,1] [,2]
+#> [1,]    0    0
+#> [2,]    5    5
+#> [3,]   11   11
+```
+
+Animated PNG and WebP decode their first frame, with an `animated`
+attribute set to `TRUE`.
+
+## Writing
+
+[`pix_write()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+picks the format from the file’s extension. Each format also has its own
+writer with its own options.
+
+``` r
+
+out <- tempfile(fileext = ".webp")
+pix_write(int, out, lossless = TRUE)
+identical(pix_read(out, as = "integer"), int)
+#> [1] TRUE
+```
+
+- [`pix_write_png()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  writes 8 or 16 bits with 1 to 4 channels, at a zlib `compression` from
+  0 to 9, with an optional ICC profile, EXIF block or sRGB rendering
+  intent.
+- [`pix_write_jpeg()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  takes a `quality` on libjpeg’s scale, a chroma `subsampling` and
+  `progressive`. JPEG stores no alpha: an alpha channel is dropped only
+  when every pixel is opaque.
+- [`pix_write_webp()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  is lossy or `lossless`, with a `method` trading speed for size.
+- [`pix_write_qoi()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  writes 8-bit RGB or RGBA.
+
+The writers take every shape
+[`pix_read()`](https://pedrobtz.github.io/zupix/reference/pix_read.md)
+returns. Doubles are clamped to `[0, 1]` and rounded; an integer array
+without a `bits` attribute is treated as 8-bit if every value is at most
+255. Without a `file`, the writers return the encoded bytes as a raw
+vector.
+
+``` r
+
+png <- pix_write_png(int, icc = as.raw(1:100))
+length(png)
+#> [1] 311
+identical(pix_icc(png), as.raw(1:100))
+#> [1] TRUE
+```
+
+## Limits and errors
+
+A small file can declare a huge image. zupix parses the header, checks
+it against
+[`pix_limits()`](https://pedrobtz.github.io/zupix/reference/pix_limits.md),
+and allocates only then. The limits are the largest side, the number of
+pixels, the bytes one decode may use, and the bytes of metadata.
+
+``` r
+
+pix_limits()
+#> <zupix_limits>
+#>   max_side      65,535
+#>   max_pixels    100,000,000
+#>   max_bytes     2,147,483,648
+#>   max_metadata  16,777,216
+```
+
+Every error is a condition of class `zupix_error` with one more specific
+class, such as `zupix_limit_error`, `zupix_decode_error` (a corrupt or
+truncated file; zupix never returns a partial image) or
+`zupix_unsupported_error` (a valid feature outside zupix’s scope, such
+as 12-bit or arithmetic-coded JPEG). Handle them by class;
+`?zupix-conditions` lists them all.
+
+``` r
+
+truncated <- readBin(f, "raw", 100)
+tryCatch(
+  pix_read(truncated),
+  zupix_decode_error = function(e) "corrupt or truncated"
+)
+#> [1] "corrupt or truncated"
+```
+
+## From C
+
+Other packages can call the same codecs from C, without going through R.
+Declare `Imports: zupix` and `LinkingTo: zupix`, import any function of
+zupix in your `NAMESPACE` so its DLL is loaded first, and include
+`zupix-r.h`:
+
+``` c
+#include <zupix-r.h>
+
+SEXP my_image_width(SEXP bytes) {
+  const zupix_api_v1 *api = zupix_api();
+  zpx_info info = {sizeof info};
+  if (api == NULL) Rf_error("zupix is missing or too old");
+  if (api->probe(RAW(bytes), XLENGTH(bytes), NULL, &info) != ZPX_OK)
+    return Rf_ScalarInteger(NA_INTEGER);
+  return Rf_ScalarInteger((int) info.width);
+}
+```
+
+The table also decodes into five pixel layouts with any row stride,
+extracts ICC and EXIF data, and encodes all four formats through a
+callback. Nothing in it calls R or raises an R error.
+`inst/include/zupix.h` documents every function.
+
+## Speed
+
+Measured on a 12-megapixel synthetic photograph (R 4.5.2, macOS,
+x86_64), against the packages that link the same formats’ system
+libraries. Times are medians; lower is faster.
+
+| Operation | Reference | zupix |
+|----|----|----|
+| PNG decode to `nativeRaster` | `png` 0.19 s | 0.22 s |
+| JPEG decode to `nativeRaster` | `jpeg` 0.18 s | 0.06 s |
+| WebP decode | `webp` 2.52 s (doubles) | 0.25 s (`nativeRaster`) |
+| PNG encode, level 6 | `png` 2.25 s | 2.82 s, same size |
+| JPEG encode, quality 90 | `jpeg` 0.57 s | 0.86 s |
+| WebP encode, quality 75 | `webp` 1.84 s | 1.52 s |
+| [`pix_info()`](https://pedrobtz.github.io/zupix/reference/pix_info.md) on 1,000 files |  | 0.18 s |
+
+PNG decoding spends about the same time in the decoder as libpng; the
+rest is reading the whole file into memory first. zupix’s JPEG decoder
+is Wuffs, and its JPEG encoder is libjpeg-turbo without SIMD.
+
+## Where zupix differs from the reference decoders
+
+zupix is tested against reference decoders on public test suites. It
+decodes every valid PngSuite image exactly as the png package does, and
+every JPEG it was tested on exactly as libjpeg-turbo does. The jpeg
+package bundles IJG libjpeg 9e, which upsamples colour differently, so
+colour JPEGs read with it differ from zupix’s by a few levels near sharp
+edges.
+
+Two differences come from the version of Wuffs zupix bundles
+(v0.4.0-alpha.12):
+
+- **Some lossy WebP files.** On 8 of the 131 files in libwebp’s test
+  suite, lossy colour decodes up to 32 levels away from libwebp’s
+  output, though lossy WebP is specified to decode exactly. Alpha, and
+  lossless WebP, are exact.
+- **One QOI test image.** On `edgecase.qoi` from the QOI test images,
+  10,272 pixels decode as transparent black where the reference decoder
+  gives opaque black.
+
+The tests pin both, so an update of Wuffs that fixes them shows up.

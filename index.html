@@ -31,7 +31,14 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="articles/zupix.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="articles/zupix.html">Getting started with zupix</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -51,22 +58,80 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>The goal of zupix is to …</p>
+<p>zupix reads and writes PNG, JPEG, WebP and QOI images. Each of those formats is already readable from R, but through a system library (libpng, libjpeg, libwebp) or ImageMagick, which has to be installed before the package can be built from source. And images arrive from the network, from PDFs and from users, so decoding one is parsing input nobody has checked.</p>
+<p>zupix compiles every codec into the package and treats every file as hostile:</p>
+<ul>
+<li>
+<strong>No system library.</strong> Installing zupix needs a C compiler and the zlib R is built with, nothing else. Decoding goes through <a href="https://github.com/google/wuffs" class="external-link">Wuffs</a>; encoding through zupix’s own PNG writer, <a href="https://libjpeg-turbo.org/" class="external-link">libjpeg-turbo</a>, <a href="https://developers.google.com/speed/webp" class="external-link">libwebp</a> and <a href="https://qoiformat.org/" class="external-link">qoi.h</a>.</li>
+<li>
+<strong>Built for hostile input.</strong> Wuffs’s decoders are memory-safe by construction, and every size an image declares is checked against <code><a href="reference/pix_limits.html">pix_limits()</a></code> before anything is allocated. zupix’s own metadata scanners are fuzzed.</li>
+<li>
+<strong>The pixels the file holds.</strong> No colour management, gamma or orientation is applied unless you ask. ICC profiles and EXIF blocks come out as raw bytes, and the EXIF orientation is applied only with <code>orient = TRUE</code>.</li>
+<li>
+<strong>Familiar shapes.</strong> Images decode to a <code>nativeRaster</code> or an array, as the png package returns them, at 8 or 16 bits, and the writers take the same shapes back.</li>
+<li>
+<strong>A C interface for other packages.</strong> The same codecs are available to C code through a registered function table.</li>
+</ul>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>You can install the development version of zupix from <a href="https://github.com/" class="external-link">GitHub</a> with:</p>
+<p>zupix is not on CRAN yet. Install the development version from GitHub:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"pedrobtz/zupix"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
+<h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
 </h2>
-<p>This is a basic example which shows you how to solve a common problem:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pedrobtz.github.io/zupix/">zupix</a></span><span class="op">)</span></span>
-<span><span class="co">## basic example code</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pedrobtz.github.io/zupix/">zupix</a></span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="reference/pix_info.html">pix_info()</a></code> reads what an image is from its header, without decoding a pixel. It takes any number of files.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">f</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"gradient.png"</span>, package <span class="op">=</span> <span class="st">"zupix"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/pix_info.html">pix_info</a></span><span class="op">(</span><span class="va">f</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"format"</span>, <span class="st">"width"</span>, <span class="st">"height"</span>, <span class="st">"bits"</span>, <span class="st">"colour_type"</span>, <span class="st">"alpha"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;   format width height bits colour_type alpha</span></span>
+<span><span class="co">#&gt; 1    png    48     32    8         rgb FALSE</span></span></code></pre></div>
+<p><code><a href="reference/pix_read.html">pix_read()</a></code> decodes to a <code>nativeRaster</code> by default, ready for <code><a href="https://rdrr.io/r/grid/grid.raster.html" class="external-link">grid::grid.raster()</a></code>. Ask for <code>"integer"</code> or <code>"double"</code> to work with the values; the shape is <code>height x width x channels</code>.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">img</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pix_read.html">pix_read</a></span><span class="op">(</span><span class="va">f</span>, as <span class="op">=</span> <span class="st">"integer"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">img</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 32 48  3</span></span>
+<span><span class="va">img</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, <span class="fl">1</span><span class="op">]</span></span>
+<span><span class="co">#&gt;      [,1] [,2] [,3]</span></span>
+<span><span class="co">#&gt; [1,]    0    5   11</span></span>
+<span><span class="co">#&gt; [2,]    0    5   11</span></span></code></pre></div>
+<p>The writers take the same shapes. Here the image goes out as a JPEG that carries an EXIF orientation of 6, “rotate 90 degrees clockwise to display”. Reading it back returns the pixels as stored unless <code>orient = TRUE</code> says to apply that.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">exif</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/raw.html" class="external-link">as.raw</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0x49</span>, <span class="fl">0x49</span>, <span class="fl">0x2a</span>, <span class="fl">0</span>, <span class="fl">8</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">0x12</span>, <span class="fl">1</span>, <span class="fl">3</span>, <span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>,</span>
+<span>                 <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">6</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">jpg</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pix_write.html">pix_write_jpeg</a></span><span class="op">(</span><span class="va">img</span>, quality <span class="op">=</span> <span class="fl">90L</span>, exif <span class="op">=</span> <span class="va">exif</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/pix_info.html">pix_info</a></span><span class="op">(</span><span class="va">jpg</span><span class="op">)</span><span class="op">$</span><span class="va">orientation</span></span>
+<span><span class="co">#&gt; [1] 6</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="fu"><a href="reference/pix_read.html">pix_read</a></span><span class="op">(</span><span class="va">jpg</span>, as <span class="op">=</span> <span class="st">"integer"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 32 48  3</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="fu"><a href="reference/pix_read.html">pix_read</a></span><span class="op">(</span><span class="va">jpg</span>, as <span class="op">=</span> <span class="st">"integer"</span>, orient <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 48 32  3</span></span></code></pre></div>
+<p>Every size an image declares is checked before memory is allocated. A breach is a <code>zupix_limit_error</code> that names the limit, raised before any pixel memory exists.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/pix_read.html">pix_read</a></span><span class="op">(</span><span class="va">f</span>, limits <span class="op">=</span> <span class="fu"><a href="reference/pix_limits.html">pix_limits</a></span><span class="op">(</span>max_pixels <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Error in `pix_read()`:</span></span>
+<span><span class="co">#&gt; ! PNG has 1,536 pixels, more than `max_pixels` (1,000).</span></span></code></pre></div>
+<p>Every function starts with <code>pix_</code>, and every writer is <code>pix_write_</code> and a format; <code><a href="reference/pix_write.html">pix_write()</a></code> picks one from the file’s extension.</p>
+</div>
+<div class="section level2">
+<h2 id="learn-more">Learn more<a class="anchor" aria-label="anchor" href="#learn-more"></a>
+</h2>
+<ul>
+<li>
+<a href="https://pedrobtz.github.io/zupix/articles/zupix.html">Getting started with zupix</a> covers the shapes, metadata, writing, limits and errors, calling zupix from C, how fast it is, and where it differs from the reference decoders.</li>
+<li>The <a href="https://pedrobtz.github.io/zupix/reference/">reference index</a> lists every function.</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="acknowledgements">Acknowledgements<a class="anchor" aria-label="anchor" href="#acknowledgements"></a>
+</h2>
+<p>zupix is built on <a href="https://github.com/google/wuffs" class="external-link">Wuffs</a> (The Wuffs Authors), <a href="https://libjpeg-turbo.org/" class="external-link">libjpeg-turbo</a>, <a href="https://chromium.googlesource.com/webm/libwebp" class="external-link">libwebp</a> (Google) and <a href="https://github.com/phoboslab/qoi" class="external-link">qoi.h</a> (Dominic Szablewski), bundled under their own licences (see <code>inst/COPYRIGHTS</code>). This software is based in part on the work of the Independent JPEG Group.</p>
+<p>It is tested against <a href="http://www.schaik.com/pngsuite/" class="external-link">PngSuite</a> (Willem van Schaik), libjpeg-turbo’s and libwebp’s test images and the QOI test images, with the <a href="https://CRAN.R-project.org/package=png" class="external-link">png</a>, <a href="https://CRAN.R-project.org/package=jpeg" class="external-link">jpeg</a>, <a href="https://CRAN.R-project.org/package=webp" class="external-link">webp</a> and <a href="https://CRAN.R-project.org/package=qoi" class="external-link">qoi</a> packages and libjpeg-turbo’s <code>djpeg</code> as reference decoders.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -106,6 +171,7 @@
 <ul class="list-unstyled">
 <li><a href="https://github.com/pedrobtz/zupix/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/pedrobtz/zupix/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://github.com/pedrobtz/zupix/actions/workflows/coverage.yaml" class="external-link"><img src="https://raw.githubusercontent.com/pedrobtz/zupix/gh-pages/badges/coverage.svg" alt="coverage"></a></li>
+<li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
 </ul>
 </div>
 

@@ -96,7 +96,8 @@ tools/vendor/verify          # vendored tree == manifest + patches (offline)
 tools/vendor/fetch [source]  # re-vendor from tools/vendor/manifest.tsv
 tools/check-symbols          # zupix.so imports no stdio/exit/abort/getenv/RNG,
                              # exports only R_init_zupix (add --canary)
-tools/run-benchmarks         # design §10, into .agents/benchmarks.md
+tools/run-benchmarks         # design §10, into .agents/benchmarks.md (from a
+                             # built tarball: load_all() leaves -O0 objects)
 ```
 
 ## Architecture
@@ -232,13 +233,16 @@ not show.
 
 ## Definition of done
 
-`devtools::document()` and `devtools::check()` clean, meaning 0 errors,
-0 warnings and 0 notes. The one allowed note is “New submission” before
-the first release. `devtools::test(shuffle = TRUE)` green. CI green at
-the change’s tier: the quick profile for a `quick` roadmap stage or an
-ordinary pull request, the full profile for a `full` stage, `Full CI`,
-and every release. A user-facing change also needs a test, roxygen
-documentation and a `NEWS.md` entry.
+[`devtools::document()`](https://devtools.r-lib.org/reference/document.html)
+and
+[`devtools::check()`](https://devtools.r-lib.org/reference/check.html)
+clean, meaning 0 errors, 0 warnings and 0 notes. The one allowed note is
+“New submission” before the first release.
+`devtools::test(shuffle = TRUE)` green. CI green at the change’s tier:
+the quick profile for a `quick` roadmap stage or an ordinary pull
+request, the full profile for a `full` stage, `Full CI`, and every
+release. A user-facing change also needs a test, roxygen documentation
+and a `NEWS.md` entry.
 
 ## Releasing to CRAN
 
