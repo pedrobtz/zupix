@@ -109,7 +109,10 @@ for `png`, `jpeg` and `webp`. Deviation: `qoi` is not in the baseline,
 because qoi 0.1.0's `writeQOI()` overflows the C stack on a 12-megapixel
 image and design §10 sets no QOI target. Further deviations: Wuffs needed a
 second patch (an unused function the pragmas had hidden), and libwebp
-needs `-DWEBP_EXTERN=extern` so its API is not exported. The forbidden-symbol
+needs `-DWEBP_EXTERN=extern` so its API is not exported. GCC 16 then
+flagged `-Woverflow` in libwebp's `rescaler_sse2.c`, fixed upstream after
+1.6.0 (commit 220e3d31), so libwebp carries that commit as a backport
+patch. Wuffs itself passed every leg, GCC 16 included: D1's gate holds. The forbidden-symbol
 step is `tools/check-symbols` in `hardening.yaml`, with a canary.
 
 **Exit criteria.**

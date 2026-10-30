@@ -14,7 +14,7 @@ vendored <- data.frame(
   patches = c(
     "0001-drop-diagnostic-pragmas.patch, 0002-drop-unused-swizzle.patch",
     "0001-no-stdio-or-exit.patch",
-    "",
+    "0001-backport-rescaler-sse2-casts.patch",
     ""
   ),
   used_for = c(

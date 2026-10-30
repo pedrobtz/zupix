@@ -103,7 +103,13 @@ licenses/libwebp-COPYING), with Google's additional patent grant in
 src/vendor/libwebp/PATENTS (licenses/libwebp-PATENTS). The authors are
 listed in src/vendor/libwebp/AUTHORS (licenses/libwebp-AUTHORS).
 
-Not modified.
+Modified by one patch, a backport of a later upstream change:
+
+  0001-backport-rescaler-sse2-casts.patch  applies upstream commit
+      220e3d311aad7da6060c3a7380e04a0cdd113a30 (2026-08-06) to
+      src/dsp/rescaler_sse2.c: explicit (int) casts on _mm_set_epi32()
+      arguments, which silence GCC 16's -Woverflow warning. No change in
+      behaviour.
 
 src/vendor/qoi/ (qoi.h, commit ffb2d2cb)
 ---------------------------------------
