@@ -1,0 +1,5 @@
+# Kept from the Wuffs archive: the single-file C release and both licences.
+LICENSE
+LICENSE-APACHE
+LICENSE-MIT
+release/c/wuffs-v0.4.c

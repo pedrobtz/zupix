@@ -1,0 +1,124 @@
+#!/bin/sh
+# Offline check that the vendored tree is exactly what the manifest describes.
+#
+# Fails if a vendored file was edited, added or removed without going through
+# `tools/vendor/fetch`; if src/Makevars and the manifest disagree about the
+# define set; if a vendored version differs from the manifest or from what
+# zupix_info() reports; or if the patch set disagrees across the manifest,
+# tools/patches/ and inst/COPYRIGHTS. Safe to run in CI.
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd "$ROOT"
+MANIFEST=tools/vendor/manifest.tsv
+. tools/vendor/common.sh
+
+status=0
+sums=tools/vendor/checksums.sha256
+fail() { printf 'FAIL %s\n' "$*" >&2; status=1; }
+
+[ -f "$sums" ] || { echo "FAIL missing $sums; run tools/vendor/record" >&2; exit 1; }
+
+# 1. every recorded file still hashes to the recorded value
+while read -r want path; do
+    [ -n "$want" ] || continue
+    if [ ! -f "$path" ]; then
+        fail "missing vendored file: $path"
+    elif [ "$(sha256_of "$path")" != "$want" ]; then
+        fail "modified vendored file: $path"
+    fi
+done < "$sums"
+
+# 2. no vendored file the checksums do not know about, and no source
+#    directory the manifest does not know about
+for src in $(manifest_sources); do
+    for f in $(vendored_files "$src"); do
+        grep -q "  $f\$" "$sums" || fail "unrecorded vendored file: $f"
+    done
+done
+for d in src/vendor/*/; do
+    d=$(basename "$d")
+    manifest_sources | grep -qx "$d" || fail "src/vendor/$d is not in the manifest"
+done
+
+# 3. Makevars and the manifest agree on the define set, in both directions,
+#    reading Makevars with its comments stripped
+makevars_flags=$(sed 's/#.*//' src/Makevars)
+declared_defines=$(for src in $(manifest_sources); do
+    d=$(manifest_field "$src" defines); [ "$d" = "-" ] || echo "$d" | tr ',' ' '
+done)
+for d in $declared_defines; do
+    printf '%s\n' "$makevars_flags" | grep -q -- "-D$d\b" ||
+        fail "src/Makevars is missing -D$d, which the manifest declares"
+done
+for d in $(printf '%s\n' "$makevars_flags" | grep -oE '\-D[A-Za-z0-9_]+' \
+             | sed 's/^-D//' | LC_ALL=C sort -u); do
+    printf '%s\n' $declared_defines | grep -qx "$d" ||
+        fail "src/Makevars defines -D$d, which the manifest does not declare"
+done
+
+# 4. each source's own version matches the manifest, and zupix_info()'s
+#    table (R/zupix-info.R) names that version and the pinned commit
+v=$(sed -n 's/^#define WUFFS_VERSION_STRING "\(.*\)"/\1/p' src/vendor/wuffs/wuffs-v0.4.c)
+[ "$v" = "$(manifest_field wuffs version_string)" ] ||
+    fail "wuffs-v0.4.c reports $v, manifest declares $(manifest_field wuffs version_string)"
+v=$(sed -n 's/^#define LIBJPEG_TURBO_VERSION  *\([0-9.]*\)$/\1/p' src/jpeg-config/jconfig.h)
+[ "$v" = "$(manifest_field libjpeg-turbo version_string)" ] ||
+    fail "src/jpeg-config/jconfig.h says $v, manifest declares $(manifest_field libjpeg-turbo version_string)"
+h=src/vendor/libwebp/src/enc/vp8i_enc.h
+v=$(for m in MAJ MIN REV; do sed -n "s/^#define ENC_${m}_VERSION \([0-9]*\)/\1/p" "$h"; done | paste -sd. -)
+[ "$v" = "$(manifest_field libwebp version_string)" ] ||
+    fail "$h reports $v, manifest declares $(manifest_field libwebp version_string)"
+for src in $(manifest_sources); do
+    for col in version_string commit; do
+        val=$(manifest_field "$src" "$col")
+        grep -qF "\"$val\"" R/zupix-info.R ||
+            fail "R/zupix-info.R does not name $src $col $val"
+    done
+done
+
+# 5. the patch set agrees across the manifest, tools/patches/ and
+#    inst/COPYRIGHTS, in every direction: a patch must exist, be declared,
+#    and be disclosed, since it modifies someone else's source
+declared=$(for src in $(manifest_sources); do
+    p=$(manifest_field "$src" patches); [ "$p" = "-" ] && continue
+    for q in $(echo "$p" | tr ',' ' '); do echo "$src/$q"; done
+done | LC_ALL=C sort -u)
+for p in $declared; do
+    [ -f "tools/patches/$p" ] || fail "manifest declares tools/patches/$p, which does not exist"
+    grep -qF "$(basename "$p")" inst/COPYRIGHTS || fail "inst/COPYRIGHTS does not mention $p"
+done
+for f in $(find tools/patches -type f -name '*.patch' | LC_ALL=C sort); do
+    printf '%s\n' $declared | grep -qx "${f#tools/patches/}" ||
+        fail "$f is not declared in the manifest, so fetch would not apply it"
+done
+for p in $(grep -oE '[0-9]{4}-[A-Za-z0-9._-]+\.patch' inst/COPYRIGHTS | LC_ALL=C sort -u); do
+    printf '%s\n' $declared | grep -q "/$p\$" ||
+        fail "inst/COPYRIGHTS mentions $p, which the manifest does not declare"
+done
+
+# 6. the licence texts installed under licenses/ are the vendored ones,
+#    byte for byte (inst/licenses/<source>-<file> copies src/vendor/<source>/<file>)
+for f in inst/licenses/*; do
+    b=$(basename "$f")
+    found=0
+    for src in $(manifest_sources); do
+        case "$b" in
+            "$src"-*)
+                found=1
+                cmp -s "$f" "src/vendor/$src/${b#"$src"-}" ||
+                    fail "$f is not a copy of src/vendor/$src/${b#"$src"-}"
+                ;;
+        esac
+    done
+    [ "$found" -eq 1 ] || fail "$f belongs to no vendored source"
+done
+for src in $(manifest_sources); do
+    ls inst/licenses/"$src"-* >/dev/null 2>&1 ||
+        fail "no licence text installed for $src under inst/licenses/"
+done
+
+if [ "$status" -eq 0 ]; then
+    printf 'ok  vendored tree matches %s\n' "$MANIFEST"
+fi
+exit "$status"

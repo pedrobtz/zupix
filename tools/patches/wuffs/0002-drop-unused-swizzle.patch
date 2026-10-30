@@ -1,0 +1,57 @@
+--- a/wuffs-v0.4.c
++++ b/wuffs-v0.4.c
+@@ -1,7 +1,10 @@
+ // Modified for the zupix R package: every `#pragma GCC diagnostic` and
+ // `#pragma clang diagnostic` line has been removed, because R CMD check
+-// reports diagnostic-suppressing pragmas. No other change.
+-// (tools/patches/wuffs/0001-drop-diagnostic-pragmas.patch in zupix.)
++// reports diagnostic-suppressing pragmas, and the one function nothing
++// calls, wuffs_private_impl__swizzle_swap_rgbx_bgrx_64, has been deleted,
++// because without those pragmas it is a -Wunused-function warning.
++// (tools/patches/wuffs/0001-drop-diagnostic-pragmas.patch and
++// 0002-drop-unused-swizzle.patch in zupix.)
+ 
+ #ifndef WUFFS_INCLUDE_GUARD
+ #define WUFFS_INCLUDE_GUARD
+@@ -25983,41 +25986,6 @@
+     d[3] = s3;
+     s += 4;
+     d += 4;
+-  }
+-  return len;
+-}
+-
+-static uint64_t  //
+-wuffs_private_impl__swizzle_swap_rgbx_bgrx_64(uint8_t* dst_ptr,
+-                                              size_t dst_len,
+-                                              uint8_t* dst_palette_ptr,
+-                                              size_t dst_palette_len,
+-                                              const uint8_t* src_ptr,
+-                                              size_t src_len) {
+-  size_t len = (dst_len < src_len ? dst_len : src_len) / 8;
+-  uint8_t* d = dst_ptr;
+-  const uint8_t* s = src_ptr;
+-
+-  size_t n = len;
+-  while (n--) {
+-    uint8_t s0 = s[0];
+-    uint8_t s1 = s[1];
+-    uint8_t s2 = s[2];
+-    uint8_t s3 = s[3];
+-    uint8_t s4 = s[4];
+-    uint8_t s5 = s[5];
+-    uint8_t s6 = s[6];
+-    uint8_t s7 = s[7];
+-    d[0] = s4;
+-    d[1] = s5;
+-    d[2] = s2;
+-    d[3] = s3;
+-    d[4] = s0;
+-    d[5] = s1;
+-    d[6] = s6;
+-    d[7] = s7;
+-    s += 8;
+-    d += 8;
+   }
+   return len;
+ }

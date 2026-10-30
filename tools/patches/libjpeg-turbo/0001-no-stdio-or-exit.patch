@@ -1,0 +1,53 @@
+--- a/jerror.c
++++ b/jerror.c
+@@ -5,6 +5,10 @@
+  * Copyright (C) 1991-1998, Thomas G. Lane.
+  * libjpeg-turbo Modifications:
+  * Copyright (C) 2022, 2024, D. R. Commander.
++ * Modified for the zupix R package: error_exit() hands control to zupix
++ * instead of calling exit(), and output_message() writes nothing instead of
++ * printing to stderr, because an R package may do neither.
++ * (tools/patches/libjpeg-turbo/0001-no-stdio-or-exit.patch in zupix.)
+  * For conditions of distribution and use, see the accompanying README.ijg
+  * file.
+  *
+@@ -63,16 +67,18 @@
+  * or jpeg_destroy) at some point.
+  */
+ 
++/* zupix: defined in src/zpx_jpeg_error.c. */
++extern void zpx_int_jpeg_error_exit(j_common_ptr cinfo);
++
+ METHODDEF(void)
+ error_exit(j_common_ptr cinfo)
+ {
+   /* Always display the message */
+   (*cinfo->err->output_message) (cinfo);
+ 
+-  /* Let the memory manager delete any temp files before we die */
+-  jpeg_destroy(cinfo);
+-
+-  exit(EXIT_FAILURE);
++  /* zupix: the encoder that owns cinfo destroys it and unwinds. Never
++   * returns: zpx_int_jpeg_error_exit() longjmps to that encoder's frame. */
++  zpx_int_jpeg_error_exit(cinfo);
+ }
+ 
+ 
+@@ -99,14 +105,8 @@
+   /* Create the message */
+   (*cinfo->err->format_message) (cinfo, buffer);
+ 
+-#ifdef USE_WINDOWS_MESSAGEBOX
+-  /* Display it in a message dialog box */
+-  MessageBox(GetActiveWindow(), buffer, "JPEG Library Error",
+-             MB_OK | MB_ICONERROR);
+-#else
+-  /* Send it to stderr, adding a newline */
+-  fprintf(stderr, "%s\n", buffer);
+-#endif
++  /* zupix: discarded. zupix formats error messages itself. */
++  (void)buffer;
+ }
+ 
+ 

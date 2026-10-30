@@ -1,0 +1,917 @@
+--- a/wuffs-v0.4.c
++++ b/wuffs-v0.4.c
+@@ -1 +1,6 @@
++// Modified for the zupix R package: every `#pragma GCC diagnostic` and
++// `#pragma clang diagnostic` line has been removed, because R CMD check
++// reports diagnostic-suppressing pragmas. No other change.
++// (tools/patches/wuffs/0001-drop-diagnostic-pragmas.patch in zupix.)
++
+ #ifndef WUFFS_INCLUDE_GUARD
+@@ -16,10 +21,3 @@
+ #if defined(__GNUC__) || defined(__clang__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+-#pragma GCC diagnostic ignored "-Wunreachable-code"
+-#pragma GCC diagnostic ignored "-Wunused-function"
+-#pragma GCC diagnostic ignored "-Wunused-parameter"
+ #if defined(__cplusplus)
+-#pragma GCC diagnostic ignored "-Wold-style-cast"
+ #endif
+@@ -496,4 +494,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wcast-qual"
+ #endif
+@@ -521,3 +517,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -4092,4 +4087,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wcast-qual"
+ #endif
+@@ -4102,3 +4095,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -18875,4 +18867,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wcast-qual"
+ #endif
+@@ -18889,3 +18879,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -35767,4 +35756,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -35774,3 +35761,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -36375,4 +36361,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -36382,3 +36366,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -38164,4 +38147,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -38169,3 +38150,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -38187,4 +38167,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -38192,3 +38170,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -39144,4 +39121,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -39151,3 +39126,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -40128,4 +40102,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -40133,3 +40105,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -40702,4 +40673,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -40709,3 +40678,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -42012,4 +41980,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -42019,3 +41985,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -42847,4 +42812,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -42854,3 +42817,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -43398,4 +43360,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -43405,3 +43365,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -44336,4 +44295,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -44341,3 +44298,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -44400,4 +44356,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -44405,3 +44359,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -44503,4 +44456,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -44508,3 +44459,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -45982,4 +45932,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -45989,3 +45937,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -47990,4 +47937,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -47997,3 +47942,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -49659,4 +49603,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -49664,3 +49606,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -50566,4 +50507,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -50571,3 +50510,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -50591,4 +50529,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -50596,3 +50532,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -50887,4 +50822,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -50894,3 +50827,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -51844,4 +51776,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -51851,3 +51781,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -54047,4 +53976,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -54054,3 +53981,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -57475,4 +57401,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -57480,3 +57404,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -57494,4 +57417,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -57499,3 +57420,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -57518,4 +57438,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -57523,3 +57441,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -57548,4 +57465,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -57553,3 +57468,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -57558,4 +57472,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -57564,3 +57476,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -57677,4 +57588,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -57682,3 +57591,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59391,4 +59299,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59396,3 +59302,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59402,4 +59307,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59407,3 +59310,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59466,4 +59368,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59471,3 +59371,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59584,4 +59483,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59589,3 +59486,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59669,4 +59565,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59674,3 +59568,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59683,4 +59576,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59688,3 +59579,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59834,4 +59724,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59839,3 +59727,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59864,4 +59751,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59869,3 +59754,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59873,4 +59757,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59878,3 +59760,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59925,4 +59806,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59930,3 +59809,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59934,4 +59812,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59939,3 +59815,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -59950,4 +59825,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -59955,3 +59828,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -60077,4 +59949,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -60082,3 +59952,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -60088,4 +59957,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -60093,3 +59960,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -60545,4 +60411,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -60552,3 +60416,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -62603,4 +62466,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -62610,3 +62471,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -64950,4 +64810,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -64955,3 +64813,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -65194,4 +65051,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -65199,3 +65054,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -65780,4 +65634,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -65787,3 +65639,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -66343,4 +66194,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -66350,3 +66199,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -66966,4 +66814,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -66973,3 +66819,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -68230,4 +68075,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -68237,3 +68080,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -69620,4 +69462,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -69627,3 +69467,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -70596,4 +70435,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -70603,3 +70440,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -75296,4 +75132,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -75301,3 +75135,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -76870,4 +76703,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -76877,3 +76708,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -77723,4 +77553,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -77730,3 +77558,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -77744,4 +77571,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -77751,3 +77576,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -78110,4 +77934,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -78117,3 +77939,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -78743,4 +78564,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -78750,3 +78569,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -80574,4 +80392,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -80581,3 +80397,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -80899,4 +80714,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -80904,3 +80717,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -81298,4 +81110,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -81303,3 +81113,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -81329,4 +81138,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -81334,3 +81141,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -81358,4 +81164,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -81363,3 +81167,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -81391,4 +81194,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -81396,3 +81197,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -83093,4 +82893,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -83100,3 +82898,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -87078,4 +86875,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -87085,3 +86880,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -88273,4 +88067,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -88280,3 +88072,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -88569,4 +88360,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -88574,3 +88363,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -88613,4 +88401,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -88618,3 +88404,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -88651,4 +88436,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -88656,3 +88439,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -89919,4 +89701,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -89924,3 +89704,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -89929,4 +89708,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -89937,3 +89714,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -89962,4 +89738,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -89970,3 +89744,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -89984,4 +89757,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -89989,3 +89760,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -89993,4 +89763,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90001,3 +89769,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90005,4 +89772,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90013,3 +89778,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90017,4 +89781,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90025,3 +89787,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90029,4 +89790,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90037,3 +89796,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90045,4 +89803,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90053,3 +89809,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90057,4 +89812,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90065,3 +89818,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90069,4 +89821,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90077,3 +89827,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90081,4 +89830,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90089,3 +89836,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90093,4 +89839,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90101,3 +89845,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90113,4 +89856,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90121,3 +89862,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90146,4 +89886,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90154,3 +89892,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90158,4 +89895,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90166,3 +89901,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90171,4 +89905,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90179,3 +89911,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90183,4 +89914,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90191,3 +89920,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90309,4 +90037,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90316,3 +90042,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90347,4 +90072,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90353,3 +90076,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -90885,4 +90607,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -90893,3 +90613,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -92892,4 +92611,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -92899,3 +92616,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -93088,4 +92804,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -93093,3 +92807,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -93305,4 +93018,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -93312,3 +93023,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -93916,4 +93626,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+ #endif
+@@ -93923,3 +93631,2 @@
+ #if !defined(__clang__) && defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -94029,4 +93736,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -94034,3 +93739,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -94955,4 +94659,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic push
+-#pragma GCC diagnostic ignored "-Wconversion"
+ #endif
+@@ -94960,3 +94662,2 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #endif
+@@ -98670,5 +98371,3 @@
+ #if defined(__GNUC__)
+-#pragma GCC diagnostic pop
+ #elif defined(__clang__)
+-#pragma clang diagnostic pop
+ #endif

@@ -1,0 +1,88 @@
+#!/bin/sh
+# Fetch, verify, trim, patch and record a vendored source.
+#
+#   tools/vendor/fetch [source ...]      (default: every source in the manifest)
+#
+# Network is required. This is a maintainer script; it is never run during
+# R CMD check. Afterwards `tools/vendor/verify` re-checks the result offline.
+#
+# What is kept from each archive is tools/vendor/<source>.files, one path per
+# line relative to the archive root; everything else (tests, examples, build
+# systems, decoders zupix does not use) is dropped, so the tarball stays small
+# and the attack surface reviewable. Patches are tools/patches/<source>/*.patch
+# as the manifest lists them, applied in order with -p1 inside
+# src/vendor/<source>.
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd "$ROOT"
+MANIFEST=tools/vendor/manifest.tsv
+. tools/vendor/common.sh
+
+# The leading directory dropped from each kept path. libwebp keeps its layout
+# because its sources include each other as "src/dsp/dsp.h" from the root.
+strip_prefix() {
+    case "$1" in
+        wuffs) echo "release/c/" ;;
+        libjpeg-turbo) echo "src/" ;;
+        *) echo "" ;;
+    esac
+}
+
+sources=${*:-$(manifest_sources)}
+
+for src in $sources; do
+    tag=$(manifest_field "$src" tag)
+    url=$(manifest_field "$src" archive)
+    want=$(manifest_field "$src" archive_sha256)
+    patches=$(manifest_field "$src" patches)
+
+    printf '==> %s %s\n' "$src" "$tag"
+
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    archive="$tmp/archive.tar.gz"
+
+    printf '    fetching %s\n' "$url"
+    curl -sSL --fail --retry 3 --max-time 300 -o "$archive" "$url"
+
+    got=$(sha256_of "$archive")
+    if [ "$got" != "$want" ]; then
+        printf '    sha256 MISMATCH\n      expected %s\n      got      %s\n' \
+            "$want" "$got" >&2
+        exit 1
+    fi
+    printf '    sha256 ok %s\n' "$got"
+
+    mkdir -p "$tmp/x"
+    tar -xzf "$archive" -C "$tmp/x" --strip-components=1
+
+    dest="src/vendor/$src"
+    rm -rf "$dest"
+    mkdir -p "$dest"
+    prefix=$(strip_prefix "$src")
+    n=0
+    for f in $(grep -v '^#' "tools/vendor/$src.files" | grep -v '^[[:space:]]*$'); do
+        [ -f "$tmp/x/$f" ] || { echo "    missing upstream file: $f" >&2; exit 1; }
+        rel=${f#"$prefix"}
+        mkdir -p "$(dirname "$dest/$rel")"
+        cp "$tmp/x/$f" "$dest/$rel"
+        n=$((n + 1))
+    done
+    printf '    kept %s files\n' "$n"
+
+    if [ "$patches" != "-" ] && [ -n "$patches" ]; then
+        for p in $(echo "$patches" | tr ',' ' '); do
+            printf '    applying %s\n' "$p"
+            patch -s -p1 -d "$dest" < "tools/patches/$src/$p"
+        done
+        find "$dest" \( -name '*.orig' -o -name '*.rej' \) -delete
+    fi
+
+    rm -rf "$tmp"
+    trap - EXIT
+done
+
+printf '==> recording checksums\n'
+"$ROOT/tools/vendor/record"
+printf 'done. review the diff under src/vendor/ before committing.\n'
