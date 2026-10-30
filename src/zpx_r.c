@@ -224,14 +224,131 @@ SEXP zpx_r_read(SEXP x, SEXP as_, SEXP bits_, SEXP channels_, SEXP format_,
 
   {
     const char *names[] = {"pixels", "width", "height", "channels", "bits",
-                           ""};
+                           "orientation", "animated", ""};
     out = PROTECT(Rf_mkNamed(VECSXP, names));
     SET_VECTOR_ELT(out, 0, pixels_sexp);
     SET_VECTOR_ELT(out, 1, Rf_ScalarInteger((int) p.width));
     SET_VECTOR_ELT(out, 2, Rf_ScalarInteger((int) p.height));
     SET_VECTOR_ELT(out, 3, Rf_ScalarInteger(channels));
     SET_VECTOR_ELT(out, 4, Rf_ScalarInteger(bits));
+    SET_VECTOR_ELT(out, 5, Rf_ScalarInteger(p.meta.orientation));
+    SET_VECTOR_ELT(out, 6, Rf_ScalarLogical(p.meta.animated));
   }
   UNPROTECT(direct ? 2 : 3);
+  return out;
+}
+
+/* ---- metadata ---------------------------------------------------------- */
+
+static zpx_status scan(SEXP x, SEXP limits_, zpx_limits *lim, zpx_meta *m,
+                       const char **detail) {
+  read_limits(limits_, lim);
+  *detail = NULL;
+  return zpx_int_scan(RAW(x), (size_t) XLENGTH(x), lim, m, detail);
+}
+
+static SEXP scan_failure(zpx_status s, const char *detail, const zpx_meta *m,
+                         const zpx_limits *lim) {
+  if (s == ZPX_ERR_LIMIT)
+    return failure(s, detail, ZPX_LIMIT_METADATA,
+                   (double) m->icc_len + (double) m->exif_len,
+                   (double) lim->max_metadata);
+  return failure(s, detail, ZPX_LIMIT_NONE, 0, 0);
+}
+
+/* pix_info()'s fields for one image, or a zupix_failure. Only the
+ * metadata limit applies: pix_info() reports a header pix_read() might
+ * refuse, so a caller can see why. */
+SEXP zpx_r_info(SEXP x, SEXP limits_) {
+  static const char *colour[] = {NULL, "grey", "grey_alpha", "rgb", "rgba",
+                                 "palette", "ycbcr", "cmyk", "ycck"};
+  const char *names[] = {"format", "width", "height", "bits", "colour_type",
+                         "alpha", "interlaced", "animated", "density_x",
+                         "density_y", "density_unit", "orientation", "gamma",
+                         "srgb", "chrm", "cicp", "icc", "exif", "qoi_linear",
+                         ""};
+  zpx_limits lim;
+  zpx_meta m;
+  const char *detail;
+  zpx_status s = scan(x, limits_, &lim, &m, &detail);
+  SEXP out, v;
+  if (s != ZPX_OK) return scan_failure(s, detail, &m, &lim);
+
+  out = PROTECT(Rf_mkNamed(VECSXP, names));
+  SET_VECTOR_ELT(out, 0, Rf_ScalarInteger((int) m.format));
+  SET_VECTOR_ELT(out, 1, Rf_ScalarReal((double) m.width));
+  SET_VECTOR_ELT(out, 2, Rf_ScalarReal((double) m.height));
+  SET_VECTOR_ELT(out, 3, Rf_ScalarInteger(m.bits));
+  SET_VECTOR_ELT(out, 4, colour[m.colour_type]
+                             ? Rf_mkString(colour[m.colour_type])
+                             : Rf_ScalarString(NA_STRING));
+  SET_VECTOR_ELT(out, 5, Rf_ScalarLogical(m.alpha));
+  SET_VECTOR_ELT(out, 6, Rf_ScalarLogical(m.interlaced));
+  SET_VECTOR_ELT(out, 7, Rf_ScalarLogical(m.animated));
+  SET_VECTOR_ELT(out, 8, Rf_ScalarReal(m.density_unit < 0 ? NA_REAL
+                                                          : m.density_x));
+  SET_VECTOR_ELT(out, 9, Rf_ScalarReal(m.density_unit < 0 ? NA_REAL
+                                                          : m.density_y));
+  SET_VECTOR_ELT(out, 10, Rf_ScalarInteger(m.density_unit < 0
+                                               ? NA_INTEGER
+                                               : m.density_unit));
+  SET_VECTOR_ELT(out, 11, Rf_ScalarInteger(m.orientation ? m.orientation
+                                                         : NA_INTEGER));
+  SET_VECTOR_ELT(out, 12, Rf_ScalarReal(m.gamma > 0 ? m.gamma : NA_REAL));
+  SET_VECTOR_ELT(out, 13, Rf_ScalarInteger(m.srgb < 0 ? NA_INTEGER : m.srgb));
+  if (m.has_chrm) {
+    v = Rf_allocVector(REALSXP, 8);
+    SET_VECTOR_ELT(out, 14, v);
+    for (int i = 0; i < 8; i++) REAL(v)[i] = m.chrm[i];
+  }
+  if (m.has_cicp) {
+    v = Rf_allocVector(INTSXP, 4);
+    SET_VECTOR_ELT(out, 15, v);
+    for (int i = 0; i < 4; i++) INTEGER(v)[i] = m.cicp[i];
+  }
+  SET_VECTOR_ELT(out, 16, Rf_ScalarLogical(m.icc_len > 0));
+  SET_VECTOR_ELT(out, 17, Rf_ScalarLogical(m.exif_len > 0));
+  SET_VECTOR_ELT(out, 18, m.format == ZPX_FMT_QOI
+                              ? Rf_ScalarLogical(m.qoi_linear)
+                              : Rf_ScalarLogical(NA_LOGICAL));
+  UNPROTECT(1);
+  return out;
+}
+
+/* The ICC profile's bytes, NULL when there is none, or a failure. */
+SEXP zpx_r_icc(SEXP x, SEXP limits_) {
+  zpx_limits lim;
+  zpx_meta m;
+  const char *detail;
+  size_t n = 0, cap;
+  SEXP out;
+  zpx_status s = scan(x, limits_, &lim, &m, &detail);
+  if (s != ZPX_OK) return scan_failure(s, detail, &m, &lim);
+  if (m.icc_len == 0) return R_NilValue;
+  s = zpx_int_icc(RAW(x), (size_t) XLENGTH(x), &m, &lim, NULL, &n, &detail);
+  if (s != ZPX_OK) return scan_failure(s, detail, &m, &lim);
+  out = PROTECT(Rf_allocVector(RAWSXP, (R_xlen_t) n));
+  cap = n;
+  s = zpx_int_icc(RAW(x), (size_t) XLENGTH(x), &m, &lim, RAW(out), &cap,
+                  &detail);
+  UNPROTECT(1);
+  if (s != ZPX_OK || cap != n)
+    return scan_failure(s == ZPX_OK ? ZPX_ERR_DECODE : s,
+                        detail ? detail : "ICC profile changed size",
+                        &m, &lim);
+  return out;
+}
+
+/* The EXIF block from its TIFF header onward, NULL, or a failure. */
+SEXP zpx_r_exif(SEXP x, SEXP limits_) {
+  zpx_limits lim;
+  zpx_meta m;
+  const char *detail;
+  SEXP out;
+  zpx_status s = scan(x, limits_, &lim, &m, &detail);
+  if (s != ZPX_OK) return scan_failure(s, detail, &m, &lim);
+  if (m.exif_len == 0) return R_NilValue;
+  out = Rf_allocVector(RAWSXP, (R_xlen_t) m.exif_len);
+  memcpy(RAW(out), RAW(x) + m.exif_off, m.exif_len);
   return out;
 }
