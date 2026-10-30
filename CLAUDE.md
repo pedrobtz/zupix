@@ -134,6 +134,11 @@ Growing as stages land; `.agents/design.md` §4 plans the layers.
   allocate (R vectors only, so an R error leaks nothing), then decode.
   Array outputs go through a row-major RGBA intermediate that is counted
   in `max_bytes`; an 8-bit `nativeRaster` decodes in place.
+- Wuffs v0.4.0-alpha.12 decodes still WebP only, and fails on a VP8L
+  bitstream inside a VP8X container. `zpx_decode.c` hands it a rebuilt
+  simple-format file for both an animated file’s first frame and an
+  extended VP8L file (`zpx_meta.webp_rebuild`). Revisit when Wuffs is
+  bumped.
 - Encoders write to a `zpx_write_fn` sink. From R the sink is a growable
   `malloc` buffer (`zpx_sink.c`), copied into a raw vector under
   `R_ExecWithCleanup()`, which frees the buffer even if that allocation

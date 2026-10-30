@@ -21,6 +21,26 @@ pix_write_png(
 )
 
 pix_write_qoi(x, file = NULL, colourspace = c("srgb", "linear"))
+
+pix_write_jpeg(
+  x,
+  file = NULL,
+  quality = 90L,
+  subsampling = "4:2:0",
+  progressive = FALSE,
+  icc = NULL,
+  exif = NULL
+)
+
+pix_write_webp(
+  x,
+  file = NULL,
+  quality = 75,
+  lossless = FALSE,
+  method = 4L,
+  icc = NULL,
+  exif = NULL
+)
 ```
 
 ## Arguments
@@ -35,7 +55,8 @@ pix_write_qoi(x, file = NULL, colourspace = c("srgb", "linear"))
 
 - format:
 
-  `NULL` to use `file`'s extension, or `"png"` or `"qoi"`.
+  `NULL` to use `file`'s extension (`.png`, `.jpg`, `.jpeg`, `.webp`,
+  `.qoi`), or `"png"`, `"jpeg"`, `"webp"` or `"qoi"`.
 
 - ...:
 
@@ -69,6 +90,28 @@ pix_write_qoi(x, file = NULL, colourspace = c("srgb", "linear"))
   The QOI header's colourspace byte: `"srgb"` or `"linear"`. It is a
   label only; pixels are written as given.
 
+- quality:
+
+  For JPEG, 1 to 100 on libjpeg's scale (`90` here means what it means
+  to `jpeg::writeJPEG(quality = 0.9)`). For WebP, 0 to 100; with
+  `lossless = TRUE` it trades speed for size instead.
+
+- subsampling:
+
+  JPEG chroma subsampling: `"4:2:0"`, `"4:2:2"` or `"4:4:4"`.
+
+- progressive:
+
+  `TRUE` writes a progressive JPEG.
+
+- lossless:
+
+  `TRUE` writes lossless WebP: the pixels read back exactly.
+
+- method:
+
+  WebP's speed and size trade-off, 0 (fastest) to 6 (smallest).
+
 ## Value
 
 With `file`, `file`, invisibly; with `file = NULL`, a raw vector.
@@ -93,6 +136,15 @@ channels (grey, grey and alpha, RGB, RGBA). `NA` is an error.
   optional ICC profile, EXIF block or sRGB rendering intent.
 
 - `pix_write_qoi()`: QOI, 8-bit RGB or RGBA; grey widens to RGB.
+
+- `pix_write_jpeg()`: JPEG, 8-bit grey or RGB through libjpeg-turbo,
+  with optimised Huffman tables, an optional ICC profile (`APP2`) and
+  EXIF block (`APP1`). An alpha channel must be fully opaque, since JPEG
+  cannot store transparency; 16-bit samples are rounded to 8 bits.
+
+- `pix_write_webp()`: WebP through libwebp, lossy or lossless, RGB or
+  RGBA (grey widens to RGB), with an optional ICC profile and EXIF block
+  in zupix's own `VP8X` container. 16-bit samples are rounded to 8 bits.
 
 ## See also
 

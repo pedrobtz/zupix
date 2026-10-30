@@ -18,6 +18,8 @@
 - [`pix_write()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
   [`pix_write_png()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
   [`pix_write_qoi()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  [`pix_write_jpeg()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
+  [`pix_write_webp()`](https://pedrobtz.github.io/zupix/reference/pix_write.md)
   : Write an image
 - [`zupix-conditions`](https://pedrobtz.github.io/zupix/reference/zupix-conditions.md)
   : Conditions raised by zupix

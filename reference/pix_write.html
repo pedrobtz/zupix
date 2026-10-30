@@ -57,7 +57,27 @@ passes <code>...</code> to that format's writer. The writers take the shapes
 <span>  srgb <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">pix_write_qoi</span><span class="op">(</span><span class="va">x</span>, file <span class="op">=</span> <span class="cn">NULL</span>, colourspace <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"srgb"</span>, <span class="st">"linear"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">pix_write_qoi</span><span class="op">(</span><span class="va">x</span>, file <span class="op">=</span> <span class="cn">NULL</span>, colourspace <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"srgb"</span>, <span class="st">"linear"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">pix_write_jpeg</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  file <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  quality <span class="op">=</span> <span class="fl">90L</span>,</span>
+<span>  subsampling <span class="op">=</span> <span class="st">"4:2:0"</span>,</span>
+<span>  progressive <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  icc <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  exif <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">pix_write_webp</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  file <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  quality <span class="op">=</span> <span class="fl">75</span>,</span>
+<span>  lossless <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  method <span class="op">=</span> <span class="fl">4L</span>,</span>
+<span>  icc <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  exif <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -73,7 +93,8 @@ passes <code>...</code> to that format's writer. The writers take the shapes
 
 
 <dt id="arg-format">format<a class="anchor" aria-label="anchor" href="#arg-format"></a></dt>
-<dd><p><code>NULL</code> to use <code>file</code>'s extension, or <code>"png"</code> or <code>"qoi"</code>.</p></dd>
+<dd><p><code>NULL</code> to use <code>file</code>'s extension (<code>.png</code>, <code>.jpg</code>, <code>.jpeg</code>,
+<code>.webp</code>, <code>.qoi</code>), or <code>"png"</code>, <code>"jpeg"</code>, <code>"webp"</code> or <code>"qoi"</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -108,6 +129,30 @@ does not allow both <code>icc</code> and <code>srgb</code>.</p></dd>
 <dd><p>The QOI header's colourspace byte: <code>"srgb"</code> or
 <code>"linear"</code>. It is a label only; pixels are written as given.</p></dd>
 
+
+<dt id="arg-quality">quality<a class="anchor" aria-label="anchor" href="#arg-quality"></a></dt>
+<dd><p>For JPEG, 1 to 100 on libjpeg's scale (<code>90</code> here means
+what it means to <code>jpeg::writeJPEG(quality = 0.9)</code>). For WebP, 0 to 100;
+with <code>lossless = TRUE</code> it trades speed for size instead.</p></dd>
+
+
+<dt id="arg-subsampling">subsampling<a class="anchor" aria-label="anchor" href="#arg-subsampling"></a></dt>
+<dd><p>JPEG chroma subsampling: <code>"4:2:0"</code>, <code>"4:2:2"</code> or
+<code>"4:4:4"</code>.</p></dd>
+
+
+<dt id="arg-progressive">progressive<a class="anchor" aria-label="anchor" href="#arg-progressive"></a></dt>
+<dd><p><code>TRUE</code> writes a progressive JPEG.</p></dd>
+
+
+<dt id="arg-lossless">lossless<a class="anchor" aria-label="anchor" href="#arg-lossless"></a></dt>
+<dd><p><code>TRUE</code> writes lossless WebP: the pixels read back exactly.</p></dd>
+
+
+<dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
+<dd><p>WebP's speed and size trade-off, 0 (fastest) to 6
+(smallest).</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -130,6 +175,13 @@ channels (grey, grey and alpha, RGB, RGBA). <code>NA</code> is an error.</p>
 <ul><li><p><code>pix_write_png()</code>: PNG at 8 or 16 bits, 1 to 4 channels, with an
 optional ICC profile, EXIF block or sRGB rendering intent.</p></li>
 <li><p><code>pix_write_qoi()</code>: QOI, 8-bit RGB or RGBA; grey widens to RGB.</p></li>
+<li><p><code>pix_write_jpeg()</code>: JPEG, 8-bit grey or RGB through libjpeg-turbo, with
+optimised Huffman tables, an optional ICC profile (<code>APP2</code>) and EXIF
+block (<code>APP1</code>). An alpha channel must be fully opaque, since JPEG cannot
+store transparency; 16-bit samples are rounded to 8 bits.</p></li>
+<li><p><code>pix_write_webp()</code>: WebP through libwebp, lossy or lossless, RGB or
+RGBA (grey widens to RGB), with an optional ICC profile and EXIF block
+in zupix's own <code>VP8X</code> container. 16-bit samples are rounded to 8 bits.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
