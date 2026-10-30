@@ -20,7 +20,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | 1 | [Vendored codecs and the Wuffs gate](#stage-1--vendored-codecs-and-the-wuffs-gate) | full | [#3](https://github.com/pedrobtz/zupix/issues/3) | [#16](https://github.com/pedrobtz/zupix/pull/16) | 2026-10-30 |
 | 2 | [Decoding PNG and QOI](#stage-2--decoding-png-and-qoi) | full | [#4](https://github.com/pedrobtz/zupix/issues/4) | [#17](https://github.com/pedrobtz/zupix/pull/17) | 2026-10-30 |
 | 3 | [JPEG, WebP and metadata](#stage-3--jpeg-webp-and-metadata) | full | [#5](https://github.com/pedrobtz/zupix/issues/5) | [#18](https://github.com/pedrobtz/zupix/pull/18) | 2026-10-30 |
-| 4 | [Lossless encoders](#stage-4--lossless-encoders) | quick | [#6](https://github.com/pedrobtz/zupix/issues/6) | | |
+| 4 | [Lossless encoders](#stage-4--lossless-encoders) | quick | [#6](https://github.com/pedrobtz/zupix/issues/6) | [#19](https://github.com/pedrobtz/zupix/pull/19) | 2026-10-30 |
 | 5 | [Lossy encoders and metadata embedding](#stage-5--lossy-encoders-and-metadata-embedding) | quick | [#7](https://github.com/pedrobtz/zupix/issues/7) | | |
 | 6 | [C table](#stage-6--c-table) | full | [#8](https://github.com/pedrobtz/zupix/issues/8) | | |
 | 7 | [Conformance, hostile input and fuzzing](#stage-7--conformance-hostile-input-and-fuzzing) | quick | [#9](https://github.com/pedrobtz/zupix/issues/9) | | |
@@ -259,6 +259,15 @@ core under ASan and UBSan with no finding; Stage 7 turns that into `fuzz/`.
 - The QOI encoder through `qoi.h` with zupix's allocator.
 - `pix_write()`, `pix_write_png()`, `pix_write_qoi()`; `file = NULL`
   returns a raw vector; the encoder input rules of §6.2.
+
+**Recorded 2026-10-30.** No deviation in scope. Notes: QOI stores only RGB
+or RGBA, so grey and grey-with-alpha widen losslessly and 16-bit input is a
+`zupix_input_error`; `pix_write()` recognises `.jpg`, `.jpeg` and `.webp`
+and raises `zupix_unsupported_error` for them until Stage 5. PNG `gAMA` is
+not written (design §5 gives the writer no gamma argument). As a quick
+stage it has no sanitizer CI; locally, 896 encode-and-decode runs over
+every size class, depth, channel count and level passed under ASan and
+UBSan.
 
 **Exit criteria.**
 

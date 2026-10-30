@@ -149,4 +149,44 @@ zpx_status zpx_int_decode_image(const uint8_t *buf, size_t len,
                                 uint8_t *dst, size_t stride, size_t dst_len,
                                 zpx_int_probe *out);
 
+/* ---- encoding ------------------------------------------------------- */
+
+/* Where encoders write: called with each piece of output in order;
+ * returns 0 on success, non-zero to abort with ZPX_ERR_SINK. */
+typedef int (*zpx_write_fn)(void *closure, const uint8_t *data, size_t len);
+
+/* A growable in-memory sink (zpx_sink.c): `data` is malloc'd and owned by
+ * the caller once encoding returns. */
+typedef struct {
+  uint8_t *data;
+  size_t len, cap;
+} zpx_buffer;
+
+int zpx_int_buffer_write(void *closure, const uint8_t *data, size_t len);
+
+/* PNG options (design §5). icc and exif may be NULL; srgb is a rendering
+ * intent 0..3, or -1 for none. */
+typedef struct {
+  uint32_t struct_size;
+  int compression; /* zlib level 0..9 */
+  const uint8_t *icc;
+  size_t icc_len;
+  const uint8_t *exif;
+  size_t exif_len;
+  int srgb;
+} zpx_png_opts;
+
+/* Interleaved row-major samples, `channels` per pixel (1..4), each a byte
+ * (bits 8) or a native-endian uint16_t (bits 16). */
+zpx_status zpx_int_encode_png(const uint8_t *src, uint32_t width,
+                              uint32_t height, int channels, int bits,
+                              const zpx_png_opts *opts, zpx_write_fn write,
+                              void *closure, const char **detail);
+
+/* RGB or RGBA bytes; colourspace 0 sRGB, 1 linear. */
+zpx_status zpx_int_encode_qoi(const uint8_t *src, uint32_t width,
+                              uint32_t height, int channels, int colourspace,
+                              zpx_write_fn write, void *closure,
+                              const char **detail);
+
 #endif

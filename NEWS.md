@@ -17,6 +17,11 @@
   present, without decoding pixels, for any number of files. `pix_icc()` and
   `pix_exif()` return the raw ICC profile and EXIF block.
 
+* `pix_write()`, `pix_write_png()` and `pix_write_qoi()` encode the shapes
+  `pix_read()` returns, to a file or a raw vector. PNG is zupix's own
+  writer over zlib, at 8 or 16 bits with 1 to 4 channels, an optional ICC
+  profile, EXIF block or sRGB intent; QOI uses the reference encoder.
+
 * `pix_orient()` applies an EXIF orientation losslessly; `pix_read(orient =
   TRUE)` does so while reading. Pixels come back as stored by default.
 
