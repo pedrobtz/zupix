@@ -40,21 +40,6 @@ exported_symbols <- function() {
   setdiff(names, c("_init", "_fini", "_edata", "_end", "__bss_start", ""))
 }
 
-# Every defined symbol, hidden ones included. The positive control: Wuffs's
-# PNG decoder must be listed before anything is concluded from an absence.
-compiled_symbols <- function() {
-  syms <- if (Sys.info()[["sysname"]] == "Darwin") {
-    run_nm("-U")
-  } else {
-    run_nm("--defined-only")
-  }
-  skip_if(
-    !any(grepl("wuffs_png__decoder__decode_frame", syms)),
-    "symbol table does not list Wuffs's functions (stripped?)"
-  )
-  syms
-}
-
 # A coverage or sanitizer runtime exports symbols of its own.
 is_instrumented_build <- function() {
   if (identical(Sys.getenv("R_COVR"), "true")) {
