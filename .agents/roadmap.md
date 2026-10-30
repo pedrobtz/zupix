@@ -21,7 +21,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | 2 | [Decoding PNG and QOI](#stage-2--decoding-png-and-qoi) | full | [#4](https://github.com/pedrobtz/zupix/issues/4) | [#17](https://github.com/pedrobtz/zupix/pull/17) | 2026-10-30 |
 | 3 | [JPEG, WebP and metadata](#stage-3--jpeg-webp-and-metadata) | full | [#5](https://github.com/pedrobtz/zupix/issues/5) | [#18](https://github.com/pedrobtz/zupix/pull/18) | 2026-10-30 |
 | 4 | [Lossless encoders](#stage-4--lossless-encoders) | quick | [#6](https://github.com/pedrobtz/zupix/issues/6) | [#19](https://github.com/pedrobtz/zupix/pull/19) | 2026-10-30 |
-| 5 | [Lossy encoders and metadata embedding](#stage-5--lossy-encoders-and-metadata-embedding) | quick | [#7](https://github.com/pedrobtz/zupix/issues/7) | | |
+| 5 | [Lossy encoders and metadata embedding](#stage-5--lossy-encoders-and-metadata-embedding) | quick | [#7](https://github.com/pedrobtz/zupix/issues/7) | | 2026-10-30 |
 | 6 | [C table](#stage-6--c-table) | full | [#8](https://github.com/pedrobtz/zupix/issues/8) | | |
 | 7 | [Conformance, hostile input and fuzzing](#stage-7--conformance-hostile-input-and-fuzzing) | quick | [#9](https://github.com/pedrobtz/zupix/issues/9) | | |
 | 8 | [Documentation and benchmarks](#stage-8--documentation-and-benchmarks) | quick | [#10](https://github.com/pedrobtz/zupix/issues/10) | | |
@@ -299,6 +299,21 @@ round-trips.
   threads off; zupix's own `VP8X`, `ICCP` and `EXIF` chunks (D14).
 - Format limits on encode (§6.5) as `zupix_encode_error`.
 - PSNR floors per quality recorded for JPEG and lossy WebP.
+
+**Recorded 2026-10-30.** PSNR floors on a smooth 120 x 160 image, 3 dB
+under what was measured: JPEG quality 50/75/90/100 at 38/41/44/47 dB, WebP
+quality 25/50/75/95 at 34/35/37/43 dB (`test-write-lossy.R`). Decisions
+made here, none changing the API: JPEG drops an alpha channel only when
+every pixel is opaque and otherwise raises `zupix_input_error`, since
+flattening is a colour decision (D10); JPEG and WebP round 16-bit samples
+to 8 bits; JPEG always writes optimised Huffman tables. Found: Wuffs
+v0.4.0-alpha.12 cannot decode VP8L inside a VP8X container (which zupix's
+own lossless WebP with ICC or EXIF is, and which libwebpmux writes), so the
+decoder rebuilds such files as simple VP8L (`zpx_meta.webp_rebuild`); this
+also fixes reading such files, which Stage 3 could not. Not filed upstream
+yet. Locally, 960 JPEG and WebP encode-then-decode runs passed under ASan
+and UBSan with libjpeg-turbo and libwebp instrumented, and the hostile
+harness passed 36,647 inputs including zupix-written files.
 
 **Exit criteria.**
 
