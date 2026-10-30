@@ -318,3 +318,14 @@ apng_chunks <- function(width, height, frames = 1L) {
     )
   )
 }
+
+# A seeded random image with a `bits` attribute; a matrix for one channel.
+random_image <- function(h, w, ch, bits, seed = 1L) {
+  withr::local_seed(seed)
+  a <- array(sample.int(2^bits, h * w * ch, replace = TRUE) - 1L, c(h, w, ch))
+  if (ch == 1L) {
+    a <- matrix(a, h, w)
+  }
+  attr(a, "bits") <- bits
+  a
+}
