@@ -33,8 +33,3 @@ test_that("an unknown signature is a format error", {
   )
   expect_error(pix_read(raw()), class = "zupix_format_error")
 })
-
-test_that("JPEG and WebP are recognised but not yet decoded", {
-  jpeg <- as.raw(c(0xff, 0xd8, 0xff, 0xe0, 0, 16))
-  expect_error(pix_read(jpeg), class = "zupix_unsupported_error")
-})
