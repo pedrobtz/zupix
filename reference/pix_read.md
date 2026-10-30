@@ -1,8 +1,11 @@
 # Read an image
 
-Decodes a PNG or QOI image into one of three shapes. The pixels are the
-ones the file holds: no colour conversion, gamma or ICC profile is
-applied.
+Decodes a PNG, JPEG, WebP or QOI image into one of three shapes. The
+pixels are the ones the file holds: no colour conversion, gamma or ICC
+profile is applied, and EXIF orientation is applied only when asked.
+Animated PNG and WebP decode their first frame, with attribute
+`animated` set to `TRUE`. CMYK and YCCK JPEG decode to RGB without
+colour management.
 
 ## Usage
 
@@ -12,6 +15,7 @@ pix_read(
   as = c("native", "double", "integer"),
   bits = NULL,
   channels = NULL,
+  orient = FALSE,
   format = "auto",
   limits = pix_limits()
 )
@@ -53,11 +57,17 @@ pix_read(
   an error, because removing colour or alpha is a colour decision. Not
   used by `as = "native"`.
 
+- orient:
+
+  `TRUE` applies the image's EXIF orientation (see
+  [`pix_orient()`](https://pedrobtz.github.io/zupix/reference/pix_orient.md));
+  `FALSE`, the default, returns the pixels as stored.
+
 - format:
 
   `"auto"` reads the format from the file's signature, never its
-  extension. A named format (`"png"`, `"qoi"`) that disagrees with the
-  signature is an error.
+  extension. A named format (`"png"`, `"jpeg"`, `"webp"`, `"qoi"`) that
+  disagrees with the signature is an error.
 
 - limits:
 

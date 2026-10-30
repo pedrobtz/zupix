@@ -5,12 +5,29 @@
 - Initial CRAN submission.
 
 - [`pix_read()`](https://pedrobtz.github.io/zupix/reference/pix_read.md)
-  decodes PNG (every colour type and depth, palettes, `tRNS`, Adam7) and
-  QOI into a `nativeRaster`, a double array in `[0, 1]` or an integer
-  array with a `bits` attribute, from a path, raw vector or connection.
-  `bits` and `channels` force the depth and add channels.
+  decodes PNG (every colour type and depth, palettes, `tRNS`, Adam7),
+  JPEG (baseline and progressive; grey, YCbCr, CMYK and YCCK to RGB),
+  WebP (lossy, lossy with alpha, lossless) and QOI into a
+  `nativeRaster`, a double array in `[0, 1]` or an integer array with a
+  `bits` attribute, from a path, raw vector or connection. `bits` and
+  `channels` force the depth and add channels.
   [`pix_format()`](https://pedrobtz.github.io/zupix/reference/pix_format.md)
-  names an image’s format from its signature.
+  names an image’s format from its signature. Animated PNG and WebP
+  decode their first frame, flagged by an `animated` attribute.
+
+- [`pix_info()`](https://pedrobtz.github.io/zupix/reference/pix_info.md)
+  reports format, size, depth, colour type, alpha, interlacing,
+  animation, density, EXIF orientation, the PNG colour chunks (`gAMA`,
+  `cHRM`, `sRGB`, `cICP`) and whether ICC and EXIF data are present,
+  without decoding pixels, for any number of files.
+  [`pix_icc()`](https://pedrobtz.github.io/zupix/reference/pix_icc.md)
+  and
+  [`pix_exif()`](https://pedrobtz.github.io/zupix/reference/pix_icc.md)
+  return the raw ICC profile and EXIF block.
+
+- [`pix_orient()`](https://pedrobtz.github.io/zupix/reference/pix_orient.md)
+  applies an EXIF orientation losslessly; `pix_read(orient = TRUE)` does
+  so while reading. Pixels come back as stored by default.
 
 - [`pix_limits()`](https://pedrobtz.github.io/zupix/reference/pix_limits.md)
   bounds what an image may make zupix allocate: every size an image
