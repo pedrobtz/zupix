@@ -2,16 +2,20 @@
 
 ## Authors
 
-- **First Last**. Author, maintainer.
+- **Pedro Baltazar**. Author, maintainer, copyright holder.
 
 ## Citation
 
-Last F (2026). *zupix: What the Package Does (One Line, Title Case)*. R
-package version 0.0.0.9000, <https://pedrobtz.github.io/zupix/>.
+Source:
+[`DESCRIPTION`](https://github.com/pedrobtz/zupix/blob/main/DESCRIPTION)
+
+Baltazar P (2026). *zupix: Read and Write 'PNG', 'JPEG', 'WebP' and
+'QOI' Images*. R package version 0.0.0.9000,
+<https://pedrobtz.github.io/zupix/>.
 
     @Manual{,
-      title = {zupix: What the Package Does (One Line, Title Case)},
-      author = {First Last},
+      title = {zupix: Read and Write 'PNG', 'JPEG', 'WebP' and 'QOI' Images},
+      author = {Pedro Baltazar},
       year = {2026},
       note = {R package version 0.0.0.9000},
       url = {https://pedrobtz.github.io/zupix/},
