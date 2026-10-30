@@ -113,7 +113,17 @@ Growing as stages land; `.agents/design.md` §4 plans the layers.
   compile file by file from the object lists in `src/Makevars`.
 - `src/jpeg-config/` holds zupix’s hand-written stand-ins for the
   headers libjpeg-turbo’s CMake build generates.
-- `src/zpx_r.c` is the only R-aware C; `src/zpx_init.c` registers it.
+- The core (`src/zpx_core.h` and the `zpx_*.c` it declares) includes no
+  R header. `zpx_decode.c` sees only Wuffs’s declarations; `zpx_png.c`
+  is the first of zupix’s own bounded header scanners.
+- `src/zpx_r.c` is the only R-aware C; `src/zpx_init.c` registers it. It
+  returns pixels or a `zupix_failure` list, and `R/conditions.R` turns
+  the failure into the classed condition, so no C code raises an R
+  error.
+- Decoding is two-phase: probe (header, limits on declared sizes), then
+  allocate (R vectors only, so an R error leaks nothing), then decode.
+  Array outputs go through a row-major RGBA intermediate that is counted
+  in `max_bytes`; an 8-bit `nativeRaster` decodes in place.
 
 ## Invariants that are easy to break
 

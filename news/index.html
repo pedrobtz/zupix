@@ -35,6 +35,8 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="zupix-0009000">zupix 0.0.0.9000<a class="anchor" aria-label="anchor" href="#zupix-0009000"></a></h2>
 <ul><li><p>Initial CRAN submission.</p></li>
+<li><p><code><a href="../reference/pix_read.html">pix_read()</a></code> decodes PNG (every colour type and depth, palettes, <code>tRNS</code>, Adam7) and QOI into a <code>nativeRaster</code>, a double array in <code>[0, 1]</code> or an integer array with a <code>bits</code> attribute, from a path, raw vector or connection. <code>bits</code> and <code>channels</code> force the depth and add channels. <code><a href="../reference/pix_format.html">pix_format()</a></code> names an image’s format from its signature.</p></li>
+<li><p><code><a href="../reference/pix_limits.html">pix_limits()</a></code> bounds what an image may make zupix allocate: every size an image declares is checked before anything is allocated, and a breach is a <code>zupix_limit_error</code>. Every error is a classed condition inheriting from <code>zupix_error</code> (see <code>?zupix-conditions</code>).</p></li>
 <li><p><code><a href="../reference/zupix_info.html">zupix_info()</a></code> reports the bundled Wuffs, libjpeg-turbo, libwebp and <code>qoi.h</code> versions, their upstream commits and local patches, the linked zlib version, and whether Wuffs’s SIMD code was compiled.</p></li>
 </ul></div>
   </main></div>
