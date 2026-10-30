@@ -1,0 +1,83 @@
+#!/bin/sh
+# The compiled-code gate R CMD check applies to every package, made strict
+# and run on every push: zupix.so may import no symbol that writes to the
+# console, exits, aborts, reads the environment or uses the C library's RNG,
+# and may export nothing but R_init_zupix (design §3). Vendored code is
+# included: CRAN's check makes no exception for it.
+#
+#   tools/check-symbols           build zupix's source tarball, install it into
+#                                 a temporary library, and check its shared
+#                                 object (never the objects in src/, which
+#                                 devtools::load_all() builds with -UNDEBUG)
+#   tools/check-symbols --canary  check a shared object built from
+#                                 tools/check-symbols-canary.c, which uses
+#                                 fprintf(stderr), exports a stray function
+#                                 and calls exit(); the gate must FAIL on it
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$ROOT"
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+# Imported names, without the leading underscore Mach-O adds. stderr and
+# stdout are data symbols: __stderrp/__stdoutp on macOS, stderr/stdout with
+# glibc, __acrt_iob_func/__iob_func on Windows.
+FORBIDDEN='exit|_exit|_Exit|abort|assert|__assert|__assert_fail|__assert_rtn|_assert|printf|vprintf|puts|putchar|fprintf|vfprintf|fputs|fputc|putc|perror|stdout|stderr|__stdoutp|__stderrp|__acrt_iob_func|__iob_func|rand|srand|random|srandom|rand_r|drand48|getenv'
+
+if [ "${1:-}" = "--canary" ]; then
+    CC=${CC:-cc}
+    SO="$WORK/canary.so"
+    "$CC" -shared -fPIC -o "$SO" tools/check-symbols-canary.c
+    EXPECT_FAIL=1
+else
+    if ! { (cd "$WORK" && R CMD build --no-build-vignettes --no-manual "$ROOT") &&
+           R CMD INSTALL --no-test-load --library="$WORK" "$WORK"/zupix_*.tar.gz; } \
+         > "$WORK/install.log" 2>&1; then
+        cat "$WORK/install.log" >&2
+        echo "FAIL could not build and install zupix" >&2
+        exit 1
+    fi
+    SO=$(ls "$WORK"/zupix/libs/zupix.so "$WORK"/zupix/libs/*/zupix.dll 2>/dev/null | head -1)
+    [ -n "$SO" ] || { echo "FAIL could not find the installed shared object" >&2; exit 1; }
+    EXPECT_FAIL=0
+fi
+
+status=0
+case "$(uname -s)" in
+    Darwin)
+        imports=$(nm -u "$SO" | sed 's/^_//')
+        exports=$(nm -gU "$SO" | awk '{print $3}' | sed 's/^_//')
+        ;;
+    *)
+        imports=$(nm -D --undefined-only "$SO" | awk '{print $2}' | sed 's/@.*//')
+        exports=$(nm -D --defined-only "$SO" | awk '$2 ~ /^[TDBRVWiu]$/ {print $3}' \
+                  | sed 's/@.*//' | grep -vE '^(_init|_fini|_edata|_end|__bss_start)$' || true)
+        ;;
+esac
+
+bad=$(printf '%s\n' "$imports" | grep -xE "$FORBIDDEN" || true)
+if [ -n "$bad" ]; then
+    printf 'FAIL %s imports forbidden symbols:\n' "$(basename "$SO")" >&2
+    printf '  %s\n' $bad >&2
+    status=1
+fi
+extra=$(printf '%s\n' "$exports" | grep -v '^$' | grep -vx 'R_init_zupix' || true)
+if [ -n "$extra" ]; then
+    printf 'FAIL %s exports more than R_init_zupix:\n' "$(basename "$SO")" >&2
+    printf '%s\n' "$extra" | head -20 | sed 's/^/  /' >&2
+    status=1
+fi
+
+if [ "$EXPECT_FAIL" -eq 1 ]; then
+    if [ "$status" -ne 0 ]; then
+        echo "ok  canary: the gate fails on a forbidden import and a stray export"
+        exit 0
+    fi
+    echo "CANARY FAILED: the gate passed a shared object it must reject" >&2
+    exit 1
+fi
+if [ "$status" -eq 0 ]; then
+    printf 'ok  %s: no forbidden imports; exports only R_init_zupix\n' "$(basename "$SO")"
+fi
+exit "$status"
