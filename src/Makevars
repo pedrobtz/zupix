@@ -8,10 +8,11 @@
 # libwebp and sharpyuv marking their API visibility("default"), which would
 # override $(C_VISIBILITY) and export it from zupix.so.
 #
+# ../inst/include is zupix's public header, whose types the core shares.
 # jpeg-config/ holds the configuration headers CMake would generate for
 # libjpeg-turbo; vendor/libwebp is on the path because libwebp includes its
 # own headers as "src/dsp/dsp.h" from its root.
-PKG_CPPFLAGS = -Ijpeg-config -Ivendor/libjpeg-turbo -Ivendor/libwebp \
+PKG_CPPFLAGS = -I../inst/include -Ijpeg-config -Ivendor/libjpeg-turbo -Ivendor/libwebp \
 	-DNO_GETENV -DNDEBUG -DWEBP_EXTERN=extern
 PKG_CFLAGS = $(C_VISIBILITY)
 PKG_LIBS = -lz
@@ -195,6 +196,7 @@ OBJECTS = \
 	zpx_scan.o \
 	zpx_sink.o \
 	zpx_sniff.o \
+	zpx_table.o \
 	zpx_webp.o \
 	zpx_wuffs.o \
 	$(JPEG_OBJECTS) \

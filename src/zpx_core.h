@@ -1,46 +1,15 @@
 #ifndef ZPX_CORE_H
 #define ZPX_CORE_H
 
-/* The core's types and entry points: C99, no R header. The public parts
- * become inst/include/zupix.h with the C table (design §7, Stage 6). */
+/* The core's internal types and entry points: C99, no R header. The C
+ * table over them is zpx_table.c (design §7). */
 
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum {
-  ZPX_OK = 0,
-  ZPX_ERR_FORMAT,
-  ZPX_ERR_DECODE,
-  ZPX_ERR_UNSUPPORTED,
-  ZPX_ERR_LIMIT,
-  ZPX_ERR_MEMORY,
-  ZPX_ERR_ARGUMENT,
-  ZPX_ERR_ENCODE,
-  ZPX_ERR_SINK
-} zpx_status;
-
-typedef enum {
-  ZPX_FMT_UNKNOWN = 0,
-  ZPX_FMT_PNG,
-  ZPX_FMT_JPEG,
-  ZPX_FMT_WEBP,
-  ZPX_FMT_QOI
-} zpx_format;
-
-/* Interleaved destination formats. RGBA16 is four native-endian uint16_t
- * per pixel. */
-typedef enum {
-  ZPX_PIX_RGBA8 = 1,
-  ZPX_PIX_RGB8,
-  ZPX_PIX_Y8,
-  ZPX_PIX_RGBA16,
-  ZPX_PIX_Y16
-} zpx_pixfmt;
-
-typedef struct {
-  uint32_t struct_size, max_side;
-  uint64_t max_pixels, max_bytes, max_metadata;
-} zpx_limits;
+/* The public types: status, format, pixel layouts, limits, the write
+ * callback and the encoder options (inst/include/zupix.h). */
+#include "zupix.h"
 
 /* Which limit a ZPX_ERR_LIMIT tripped, the value seen and the cap. */
 typedef enum {
@@ -51,11 +20,8 @@ typedef enum {
   ZPX_LIMIT_METADATA
 } zpx_limit_kind;
 
-
-
 zpx_format zpx_sniff(const uint8_t *buf, size_t len);
 const char *zpx_status_string(zpx_status s);
-
 
 /* zpx_scan.c: what zupix's own container scanners read (design §6.4).
  * Offsets point into the caller's buffer; ICC split over JPEG APP2
@@ -157,10 +123,6 @@ zpx_status zpx_int_decode_image(const uint8_t *buf, size_t len,
 
 /* ---- encoding ------------------------------------------------------- */
 
-/* Where encoders write: called with each piece of output in order;
- * returns 0 on success, non-zero to abort with ZPX_ERR_SINK. */
-typedef int (*zpx_write_fn)(void *closure, const uint8_t *data, size_t len);
-
 /* A growable in-memory sink (zpx_sink.c): `data` is malloc'd and owned by
  * the caller once encoding returns. */
 typedef struct {
@@ -170,18 +132,6 @@ typedef struct {
 
 int zpx_int_buffer_write(void *closure, const uint8_t *data, size_t len);
 
-/* PNG options (design §5). icc and exif may be NULL; srgb is a rendering
- * intent 0..3, or -1 for none. */
-typedef struct {
-  uint32_t struct_size;
-  int compression; /* zlib level 0..9 */
-  const uint8_t *icc;
-  size_t icc_len;
-  const uint8_t *exif;
-  size_t exif_len;
-  int srgb;
-} zpx_png_opts;
-
 /* Interleaved row-major samples, `channels` per pixel (1..4), each a byte
  * (bits 8) or a native-endian uint16_t (bits 16). */
 zpx_status zpx_int_encode_png(const uint8_t *src, uint32_t width,
@@ -189,35 +139,11 @@ zpx_status zpx_int_encode_png(const uint8_t *src, uint32_t width,
                               const zpx_png_opts *opts, zpx_write_fn write,
                               void *closure, const char **detail);
 
-/* JPEG options (design §5). subsampling: 0 4:4:4, 1 4:2:2, 2 4:2:0. */
-typedef struct {
-  uint32_t struct_size;
-  int quality; /* 1..100, libjpeg's scale */
-  int subsampling;
-  int progressive;
-  const uint8_t *icc;
-  size_t icc_len;
-  const uint8_t *exif;
-  size_t exif_len;
-} zpx_jpeg_opts;
-
 /* Grey (1 channel) or RGB (3) bytes. */
 zpx_status zpx_int_encode_jpeg(const uint8_t *src, uint32_t width,
                                uint32_t height, int channels,
                                const zpx_jpeg_opts *opts, zpx_write_fn write,
                                void *closure, const char **detail);
-
-/* WebP options (design §5). */
-typedef struct {
-  uint32_t struct_size;
-  float quality; /* 0..100 */
-  int lossless;
-  int method;    /* 0..6 */
-  const uint8_t *icc;
-  size_t icc_len;
-  const uint8_t *exif;
-  size_t exif_len;
-} zpx_webp_opts;
 
 /* RGB (3) or RGBA (4) bytes. */
 zpx_status zpx_int_encode_webp(const uint8_t *src, uint32_t width,
