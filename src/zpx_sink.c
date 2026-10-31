@@ -6,6 +6,8 @@
 /* Appends to a zpx_buffer, growing it geometrically. */
 int zpx_int_buffer_write(void *closure, const uint8_t *data, size_t len) {
   zpx_buffer *b = (zpx_buffer *) closure;
+  /* Untested, both failures: an encoded image never nears SIZE_MAX, and
+   * realloc() fails only when out of memory. */
   if (len > SIZE_MAX - b->len) return 1;
   if (b->len + len > b->cap) {
     size_t cap = b->cap ? b->cap : 65536;

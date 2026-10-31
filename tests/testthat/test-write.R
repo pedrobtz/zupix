@@ -222,3 +222,111 @@ test_that("lossless round trips hold on many random images", {
     )
   }
 })
+
+test_that("a malformed nativeRaster is refused before C reads it", {
+  no_dim <- structure(1:4, class = "nativeRaster")
+  expect_error(pix_write_png(no_dim), class = "zupix_input_error")
+  double_raster <- structure(matrix(0, 2, 2), class = "nativeRaster")
+  expect_error(pix_write_png(double_raster), class = "zupix_input_error")
+  empty <- structure(matrix(integer(), 0, 2), class = "nativeRaster")
+  expect_error(pix_write_qoi(empty), class = "zupix_input_error")
+})
+
+test_that("pix_write() without a file needs a format and returns bytes", {
+  img <- random_image(3L, 4L, 3L, 8L)
+  expect_error(pix_write(img), class = "zupix_input_error")
+  bytes <- pix_write(img, format = "qoi")
+  expect_type(bytes, "raw")
+  expect_identical(pix_read(bytes, as = "integer"), img)
+})
+
+test_that("compression, quality and method refuse NULL", {
+  img <- random_image(3L, 4L, 3L, 8L)
+  expect_error(
+    pix_write_png(img, compression = NULL),
+    class = "zupix_input_error"
+  )
+  expect_error(pix_write_jpeg(img, quality = NULL), class = "zupix_input_error")
+  expect_error(pix_write_webp(img, method = NULL), class = "zupix_input_error")
+})
+
+test_that("a JPEG ICC profile too large for 255 APP2 markers is refused", {
+  img <- random_image(2L, 2L, 3L, 8L)
+  icc <- raw(255 * 65519 + 1)
+  expect_error(pix_write_jpeg(img, icc = icc), class = "zupix_encode_error")
+  ok <- pix_write_jpeg(img, icc = raw(2 * 65519 + 1))
+  expect_identical(pix_icc(ok), raw(2 * 65519 + 1))
+})
+
+test_that("libjpeg-turbo's own errors are encode errors", {
+  # JPEG's format allows 65,535 pixels a side; libjpeg-turbo stops at
+  # 65,500 and raises through its error_exit, which longjmps back into
+  # zupix's frame.
+  err <- expect_error(
+    pix_write_jpeg(matrix(0L, 1L, 65501L)),
+    class = "zupix_encode_error"
+  )
+  expect_identical(err$format, "jpeg")
+  expect_type(err$detail, "character")
+  expect_error(
+    pix_write_jpeg(array(0L, c(65501L, 1L, 3L))),
+    class = "zupix_encode_error"
+  )
+  # The encoder is usable again afterwards.
+  expect_type(pix_write_jpeg(matrix(0L, 1L, 65500L)), "raw")
+})
+
+test_that("missing and out-of-range samples are refused in every mode", {
+  for (bad in list(NA_real_, NaN)) {
+    expect_error(
+      pix_write_png(matrix(c(0.5, bad), 1L)),
+      class = "zupix_input_error"
+    )
+  }
+  over8 <- matrix(c(0L, 256L), 1L)
+  attr(over8, "bits") <- 8L
+  over16 <- matrix(c(0, 65536), 1L)
+  attr(over16, "bits") <- 16L
+  neg <- matrix(c(0, -1), 1L)
+  attr(neg, "bits") <- 8L
+  na_bits <- matrix(c(0, NA), 1L)
+  attr(na_bits, "bits") <- 8L
+  for (bad in list(over8, over16, neg, na_bits)) {
+    err <- expect_error(pix_write_png(bad), class = "zupix_input_error")
+    expect_identical(err$arg, "x")
+  }
+  twelve <- matrix(0L, 2L, 2L)
+  attr(twelve, "bits") <- 12L
+  expect_error(pix_write_png(twelve), class = "zupix_input_error")
+  expect_error(
+    pix_write_png(array(0L, c(0L, 2L, 3L))),
+    class = "zupix_input_error"
+  )
+  expect_error(
+    pix_write_png(array(0L, c(2L, 2L, 2L, 2L))),
+    class = "zupix_input_error"
+  )
+})
+
+test_that("pix_write() refuses a bad file, extension or format", {
+  img <- random_image(2L, 2L, 3L, 8L)
+  for (bad in list(c("a.png", "b.png"), NA_character_, 1)) {
+    err <- expect_error(pix_write(img, bad), class = "zupix_input_error")
+    expect_identical(err$arg, "file")
+  }
+  dir <- withr::local_tempdir()
+  err <- expect_error(
+    pix_write(img, file.path(dir, "noext")),
+    class = "zupix_input_error"
+  )
+  expect_identical(err$arg, "format")
+  err <- expect_error(
+    pix_write(img, NULL, format = "gif"),
+    class = "zupix_input_error"
+  )
+  expect_identical(err$arg, "format")
+  expect_error(
+    pix_write(img, file.path(dir, "a.png"), format = c("png", "qoi")),
+    class = "zupix_input_error"
+  )
+})

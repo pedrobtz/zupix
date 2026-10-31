@@ -79,3 +79,9 @@ test_that("pix_orient() and orient reject bad arguments", {
     class = "zupix_input_error"
   )
 })
+
+test_that("pix_orient() keeps the animated attribute", {
+  img <- random_image(2L, 3L, 3L, 8L)
+  attr(img, "animated") <- TRUE
+  expect_true(attr(pix_orient(img, 6L), "animated"))
+})

@@ -240,6 +240,8 @@ static zpx_status walk_jpeg(const uint8_t *buf, size_t len, zpx_meta *m,
       }
       if (s) {
         if (s->count == 0) s->count = count;
+        /* Untested: reached only with m == NULL (zpx_int_icc()), on bytes
+         * that a scan with m has accepted, which refuses this above. */
         if (s->count != count)
           return fail(detail, "JPEG ICC profile segments disagree on count");
         if (s->len[seq] != 0)
@@ -535,6 +537,7 @@ zpx_status zpx_int_icc(const uint8_t *buf, size_t len, const zpx_meta *m,
     uint64_t cap = limits->max_metadata, total = 0;
     int r;
     memset(&z, 0, sizeof z);
+    /* Untested: inflateInit() fails only on allocation. */
     if (inflateInit(&z) != Z_OK) return ZPX_ERR_MEMORY;
     z.next_in = (Bytef *) (buf + m->icc_off);
     z.avail_in = (uInt) m->icc_len;
@@ -552,6 +555,7 @@ zpx_status zpx_int_icc(const uint8_t *buf, size_t len, const zpx_meta *m,
       total += room - z.avail_out;
       if (total > cap) {
         inflateEnd(&z);
+        *out_len = (size_t) total; /* the bytes inflated so far */
         *detail = "the ICC profile inflates past max_metadata";
         return ZPX_ERR_LIMIT;
       }

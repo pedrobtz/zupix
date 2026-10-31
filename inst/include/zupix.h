@@ -7,12 +7,14 @@
  * returns:
  *
  *   const zupix_api_v1 *api = zupix_api();
- *   if (api == NULL) ... zupix is missing or speaks another ABI ...
+ *   if (api == NULL) ... zupix speaks another ABI version ...
  *   zpx_info info = {sizeof info};
  *   if (api->probe(buf, len, NULL, &info) == ZPX_OK) ...
  *
  * Nothing in the table raises an R error or calls R, so it may be called
- * from inside another library's callbacks. Every struct a caller passes
+ * from inside another library's callbacks. zupix_api() itself raises an R
+ * error if zupix's DLL is not loaded, so make its first call from R-safe
+ * code (see zupix-r.h). Every struct a caller passes
  * starts with struct_size, set to sizeof the struct. Pixels are
  * interleaved, row-major, top row first; 16-bit samples are native-endian
  * uint16_t. Decoding never applies colour management, gamma or EXIF

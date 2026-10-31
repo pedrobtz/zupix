@@ -1,7 +1,8 @@
 #' Write an image
 #'
 #' `pix_write()` picks the format from `file`'s extension (or `format`) and
-#' passes `...` to that format's writer. The writers take the shapes
+#' passes `...` to that format's writer. Without a `file`, `format` is
+#' needed, and the encoded bytes are returned. The writers take the shapes
 #' [pix_read()] returns:
 #'
 #' * a `nativeRaster` (8-bit RGBA);
@@ -16,7 +17,8 @@
 #' @param x The image.
 #' @param file A path to write, or `NULL` to return the encoded bytes.
 #' @param format `NULL` to use `file`'s extension (`.png`, `.jpg`, `.jpeg`,
-#'   `.webp`, `.qoi`), or `"png"`, `"jpeg"`, `"webp"` or `"qoi"`.
+#'   `.webp`, `.qoi`), or `"png"`, `"jpeg"`, `"webp"` or `"qoi"`. Needed
+#'   when `file` is `NULL`.
 #' @param ... Arguments for the format's writer.
 #' @return With `file`, `file`, invisibly; with `file = NULL`, a raw vector.
 #' @seealso [pix_read()], and [zupix-conditions] for the errors raised.
@@ -27,10 +29,13 @@
 #' out <- tempfile(fileext = ".qoi")
 #' pix_write(img, out)
 #' identical(pix_read(out, as = "integer"), img)
-pix_write <- function(x, file, format = NULL, ...) {
+pix_write <- function(x, file = NULL, format = NULL, ...) {
   if (is.null(format)) {
+    if (is.null(file)) {
+      zpx_input_error("format", "`format` is needed when `file` is NULL.")
+    }
     if (!is.character(file) || length(file) != 1L || is.na(file)) {
-      zpx_input_error("file", "`file` must be a single path.")
+      zpx_input_error("file", "`file` must be a single path or NULL.")
     }
     ext <- tolower(tools::file_ext(file))
     format <- switch(
@@ -81,10 +86,7 @@ pix_write_png <- function(
   srgb = NULL
 ) {
   bits <- check_choice_int(bits, c(8L, 16L), "bits")
-  compression <- check_choice_int(compression, 0:9, "compression")
-  if (is.null(compression)) {
-    zpx_input_error("compression", "`compression` must be 0 to 9.")
-  }
+  compression <- check_choice_int(compression, 0:9, "compression", FALSE)
   check_raw_or_null(icc, "icc")
   check_raw_or_null(exif, "exif")
   srgb <- check_choice_int(srgb, 0:3, "srgb")
@@ -98,7 +100,7 @@ pix_write_png <- function(
     exif = exif,
     srgb = if (is.null(srgb)) -1L else srgb
   )
-  encode(px, "png", opts, file)
+  encode_image(px, "png", opts, file)
 }
 
 #' @describeIn pix_write QOI, 8-bit RGB or RGBA; grey widens to RGB.
@@ -110,7 +112,7 @@ pix_write_qoi <- function(x, file = NULL, colourspace = c("srgb", "linear")) {
   # 16-bit input is refused in C: QOI is 8-bit.
   px <- prepare_pixels(x, NULL)
   opts <- encode_opts(colourspace = as.integer(colourspace == "linear"))
-  encode(px, "qoi", opts, file)
+  encode_image(px, "qoi", opts, file)
 }
 
 #' @describeIn pix_write JPEG, 8-bit grey or RGB through libjpeg-turbo, with
@@ -133,10 +135,7 @@ pix_write_jpeg <- function(
   icc = NULL,
   exif = NULL
 ) {
-  quality <- check_choice_int(quality, 1:100, "quality")
-  if (is.null(quality)) {
-    zpx_input_error("quality", "`quality` must be 1 to 100.")
-  }
+  quality <- check_choice_int(quality, 1:100, "quality", FALSE)
   subsampling <- match_arg(
     subsampling,
     c("4:4:4", "4:2:2", "4:2:0"),
@@ -153,7 +152,7 @@ pix_write_jpeg <- function(
     subsampling = match(subsampling, c("4:4:4", "4:2:2", "4:2:0")) - 1L,
     progressive = progressive
   )
-  encode(px, "jpeg", opts, file)
+  encode_image(px, "jpeg", opts, file)
 }
 
 #' @describeIn pix_write WebP through libwebp, lossy or lossless, RGB or
@@ -182,10 +181,7 @@ pix_write_webp <- function(
     zpx_input_error("quality", "`quality` must be a number from 0 to 100.")
   }
   check_flag(lossless, "lossless")
-  method <- check_choice_int(method, 0:6, "method")
-  if (is.null(method)) {
-    zpx_input_error("method", "`method` must be 0 to 6.")
-  }
+  method <- check_choice_int(method, 0:6, "method", FALSE)
   check_raw_or_null(icc, "icc")
   check_raw_or_null(exif, "exif")
   px <- prepare_pixels(x, 8L)
@@ -196,10 +192,11 @@ pix_write_webp <- function(
     lossless = lossless,
     method = method
   )
-  encode(px, "webp", opts, file)
+  encode_image(px, "webp", opts, file)
 }
 
-# The options list zpx_r_encode() reads, by position.
+# The options list zpx_r_encode() reads, by position. Each writer sets the
+# slots its format uses; the defaults only fill the slots it ignores.
 encode_opts <- function(
   compression = 6L,
   icc = NULL,
@@ -236,7 +233,7 @@ check_flag <- function(x, arg, call = sys.call(-1L)) {
   }
 }
 
-encode <- function(px, format, opts, file, call = sys.call(-1L)) {
+encode_image <- function(px, format, opts, file, call = sys.call(-1L)) {
   if (
     !is.null(file) &&
       (!is.character(file) || length(file) != 1L || is.na(file))
@@ -287,6 +284,13 @@ prepare_pixels <- function(x, bits, call = sys.call(-1L)) {
       zpx_input_error("bits", "A nativeRaster is 8-bit.", call = call)
     }
     d <- dim(x)
+    if (!is.integer(x) || length(d) != 2L || any(d < 1L)) {
+      zpx_input_error(
+        "x",
+        "A nativeRaster must be an integer matrix with at least one pixel.",
+        call = call
+      )
+    }
     return(list(
       pixels = x,
       mode = 0L,
@@ -350,5 +354,3 @@ check_raw_or_null <- function(x, arg, call = sys.call(-1L)) {
     )
   }
 }
-
-`%||%` <- function(a, b) if (is.null(a)) b else a

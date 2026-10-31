@@ -4,7 +4,13 @@
  * table up once per translation unit through R_GetCCallable() and caches
  * it; it returns NULL when zupix speaks a different ABI version, so a
  * consumer built against an older zupix fails cleanly rather than calling
- * through a mismatched table. */
+ * through a mismatched table.
+ *
+ * The lookup itself raises an R error when zupix's DLL is not loaded (an
+ * importFrom() in the consumer's NAMESPACE makes sure it is). So make the
+ * first call where an R error is safe, for example at the top of a .Call
+ * entry point, and not from inside another library's callback. Once the
+ * table is cached, zupix_api() never calls R again. */
 
 #ifndef ZUPIX_R_H
 #define ZUPIX_R_H
@@ -32,9 +38,7 @@ static inline const zupix_api_v1 *zupix_api(void) {
       const zupix_api_v1 *(*get)(uint32_t);
     } resolve;
     resolve.fn = R_GetCCallable("zupix", "zupix_get_api");
-    if (resolve.fn != NULL) {
-      cached = resolve.get((uint32_t) ZUPIX_ABI_VERSION);
-    }
+    cached = resolve.get((uint32_t) ZUPIX_ABI_VERSION);
   }
   return cached;
 }

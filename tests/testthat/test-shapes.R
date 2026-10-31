@@ -216,3 +216,18 @@ test_that("1-, 2- and 4-bit palettes become 8-bit RGB", {
     expect_identical(img[2, 3, ], as.integer(pal[, idx[2, 3] + 1L]))
   }
 })
+
+test_that("channels that would drop alpha are refused (design D10)", {
+  ga <- random_image(3L, 4L, 2L, 8L)
+  png <- pix_write_png(ga)
+  expect_error(
+    pix_read(png, as = "integer", channels = 3L),
+    class = "zupix_input_error"
+  )
+  expect_error(
+    pix_read(png, as = "integer", channels = 1L),
+    class = "zupix_input_error"
+  )
+  rgba <- pix_read(png, as = "integer", channels = 4L)
+  expect_identical(rgba[,, 4], ga[,, 2])
+})

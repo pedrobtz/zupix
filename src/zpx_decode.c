@@ -87,11 +87,13 @@ static zpx_status new_decoder(zpx_format format, zpx_decoder *d,
   case ZPX_FMT_JPEG: size = sizeof__wuffs_jpeg__decoder(); break;
   case ZPX_FMT_WEBP: size = sizeof__wuffs_webp__decoder(); break;
   default:
+    /* Untested: probe() sends QOI to qoi.h, and zpx_int_scan() has
+     * already refused an unknown signature. */
     *detail = "not a PNG, JPEG, WebP or QOI signature";
     return ZPX_ERR_FORMAT;
   }
   d->mem = calloc(1, size);
-  if (d->mem == NULL) return ZPX_ERR_MEMORY;
+  if (d->mem == NULL) return ZPX_ERR_MEMORY; /* Untested: allocation */
   switch (format) {
   case ZPX_FMT_PNG:
     st = wuffs_png__decoder__initialize(d->mem, size, WUFFS_VERSION, 0);
@@ -104,6 +106,8 @@ static zpx_status new_decoder(zpx_format format, zpx_decoder *d,
     break;
   }
   if (!wuffs_base__status__is_ok(&st)) {
+    /* Untested: fails only on a Wuffs version or struct size mismatch,
+     * which is fixed when zupix is built. */
     *detail = wuffs_base__status__message(&st);
     return ZPX_ERR_DECODE;
   }
@@ -180,7 +184,8 @@ static zpx_status probe(const uint8_t *buf, size_t len,
     /* D13: an animated file's first frame. Wuffs decodes still WebP only,
      * so the frame's chunks are rebuilt as one; compositing a frame smaller
      * than the canvas is not implemented. An extended still file with a
-     * VP8L bitstream is rebuilt the same way (see zpx_meta.webp_rebuild). */
+     * VP8L bitstream is rebuilt the same way (see zpx_meta.webp_rebuild;
+     * https://github.com/google/wuffs/issues/210). */
     if (m->frame_len == 0) {
       out->detail = "animated WebP has no frames";
       return ZPX_ERR_DECODE;
@@ -192,7 +197,7 @@ static zpx_status probe(const uint8_t *buf, size_t len,
       return ZPX_ERR_UNSUPPORTED;
     }
     d->still = malloc(m->frame_len + 30);
-    if (d->still == NULL) return ZPX_ERR_MEMORY;
+    if (d->still == NULL) return ZPX_ERR_MEMORY; /* Untested: allocation */
     in_len = zpx_int_webp_first_frame(buf, m, d->still);
     in = d->still;
   }
@@ -288,6 +293,9 @@ zpx_status zpx_int_decode_image(const uint8_t *buf, size_t len,
   s = probe(buf, len, limits, out, &d, &ic, &src);
   if (s != ZPX_OK) goto done;
 
+  /* Untested from R, down to the QOI call: zpx_r_read() always asks for
+   * RGBA8 or RGBA16 (RGBA8 for QOI) into a buffer it sized from the probe.
+   * Only a caller of the C table (zpx_table.c) can get these wrong. */
   switch (pixfmt) {
   case ZPX_PIX_RGBA8:
     wuffs_fmt = WUFFS_BASE__PIXEL_FORMAT__RGBA_NONPREMUL;
@@ -328,7 +336,7 @@ zpx_status zpx_int_decode_image(const uint8_t *buf, size_t len,
 
   if (out->workbuf_len > 0) {
     work = malloc((size_t) out->workbuf_len);
-    if (work == NULL) {
+    if (work == NULL) { /* Untested: allocation */
       s = ZPX_ERR_MEMORY;
       goto done;
     }
@@ -340,6 +348,7 @@ zpx_status zpx_int_decode_image(const uint8_t *buf, size_t len,
       &pb, &pc, wuffs_base__make_table_u8(dst, row, out->height, stride),
       wuffs_base__empty_slice_u8());
   if (!wuffs_base__status__is_ok(&st)) {
+    /* Untested: the buffer was checked against the image just above. */
     out->detail = wuffs_base__status__message(&st);
     s = ZPX_ERR_ARGUMENT;
     goto done;

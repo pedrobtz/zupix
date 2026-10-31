@@ -18,14 +18,30 @@ test_that("every valid PngSuite file decodes as png::readPNG() does", {
 })
 
 test_that("every valid PngSuite file decodes in all three shapes", {
+  skip_if_not_installed("png")
+  # One expectation for the whole corpus, naming the files that differ:
+  # several per file would cost more time than the decoding.
+  bad <- character()
   for (f in pngsuite()[!startsWith(basename(pngsuite()), "x")]) {
     i <- pix_info(f)
-    expect_identical(dim(pix_read(f))[1:2], as.integer(c(i$height, i$width)))
-    expect_identical(
-      attr(pix_read(f, as = "integer"), "bits"),
-      if (i$bits == 16L) 16L else 8L
-    )
+    bits <- if (i$bits == 16L) 16L else 8L
+    native <- pix_read(f)
+    int <- pix_read(f, as = "integer")
+    dbl <- pix_read(f, as = "double")
+    theirs <- suppressWarnings(png::readPNG(f))
+    attributes(theirs) <- attributes(theirs)["dim"]
+    ok <- identical(dim(native)[1:2], as.integer(c(i$height, i$width))) &&
+      identical(attr(int, "bits"), bits) &&
+      identical(dim(dbl), dim(int)) &&
+      # The integer and double shapes hold the same samples, scaled, and
+      # the doubles are png::readPNG()'s exactly.
+      identical(as.vector(dbl), as.vector(int) / (2^bits - 1)) &&
+      identical(dbl, theirs)
+    if (!ok) {
+      bad <- c(bad, basename(f))
+    }
   }
+  expect_identical(bad, character())
 })
 
 test_that("every corrupt PngSuite file fails with the class its name predicts", {
@@ -92,6 +108,7 @@ test_that("every libwebp-test-data file decodes; lossless and alpha exactly", {
   # these files, in the colour channels only, though VP8 is specified
   # bit-exactly (RFC 6386); measured 2026-10-30, worst difference in
   # levels. Recorded so a Wuffs update that fixes them shows up here.
+  # Reported as https://github.com/google/wuffs/issues/211.
   known <- c(
     bryce = 11,
     lossy_alpha1 = 12,
@@ -136,9 +153,40 @@ test_that("every QOI test image decodes to its PNG's pixels and as qoi.h does", 
     if (requireNamespace("qoi", quietly = TRUE)) {
       # Every channel, alpha included, as the reference decoder gives them.
       # edgecase.qoi is the one Wuffs got wrong (a QOI_OP_RUN's pixel never
-      # entered its colour index), which is why QOI decodes through qoi.h.
+      # entered its colour index, https://github.com/google/wuffs/issues/209),
+      # which is why QOI decodes through qoi.h.
       ref <- qoi::readQOI(q)
       expect_identical(as.vector(ours), as.vector(ref), info = n)
     }
+  }
+})
+
+test_that("QOI decodes as the qoi package's qoi.h does, offline", {
+  skip_if_not_installed("qoi")
+  f <- withr::local_tempfile(fileext = ".qoi")
+  # Images that use every chunk type: runs (flat areas), the colour index
+  # (a run's pixel seen again, the case Wuffs got wrong), small and luma
+  # deltas (gradients) and full RGB and RGBA chunks (noise, alpha).
+  withr::local_seed(48L)
+  flat <- array(c(rep(10L, 60), rep(200L, 60), rep(30L, 60)), c(6L, 10L, 3L))
+  stripes <- flat
+  stripes[, c(2L, 5L, 8L), ] <- 90L
+  noise <- array(sample(0:255, 6L * 10L * 4L, TRUE), c(6L, 10L, 4L))
+  noise[1:3, 1:5, ] <- 255L
+  smooth <- smooth_rgb(12L, 16L)
+  inputs <- list(
+    runs = make_qoi_runs(10L, 20L, c(1L, 2L, 3L)),
+    rgba_ops = make_qoi(noise),
+    fixture = fixture("smooth.qoi")
+  )
+  for (img in list(flat, stripes, noise, unclass(smooth))) {
+    inputs[[length(inputs) + 1L]] <- qoi::writeQOI(img)
+  }
+  for (i in seq_along(inputs)) {
+    writeBin(inputs[[i]], f)
+    ours <- pix_read(inputs[[i]], as = "integer")
+    ref <- qoi::readQOI(f)
+    expect_identical(as.vector(ours), as.vector(ref), info = i)
+    expect_identical(dim(ours), dim(ref), info = i)
   }
 })

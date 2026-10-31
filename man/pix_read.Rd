@@ -31,13 +31,15 @@ connection, which is read whole (up to \code{max_bytes} of \code{limits}).}
 }}
 
 \item{bits}{\code{NULL} keeps the file's depth (1-, 2- and 4-bit PNGs become
-8); \code{8L} or \code{16L} forces it. Not used by \code{as = "native"}.}
+8); \code{8L} or \code{16L} forces it. With \code{as = "native"}, which is always 8-bit,
+it must be \code{NULL} or \code{8L}.}
 
 \item{channels}{\code{NULL} keeps the file's channels: 1 grey, 2 grey and
 alpha, 3 RGB, 4 RGBA; a palette becomes 3, or 4 when it has
 transparency. A larger number adds channels (grey to RGB, an opaque
 alpha); a smaller one is an error, because removing colour or alpha is
-a colour decision. Not used by \code{as = "native"}.}
+a colour decision. With \code{as = "native"}, which is always RGBA, it must
+be \code{NULL} or \code{4L}.}
 
 \item{orient}{\code{TRUE} applies the image's EXIF orientation (see
 \code{\link[=pix_orient]{pix_orient()}}); \code{FALSE}, the default, returns the pixels as stored.}

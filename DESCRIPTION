@@ -1,6 +1,6 @@
 Package: zupix
 Title: Read and Write 'PNG', 'JPEG', 'WebP' and 'QOI' Images
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: c(
     person("Pedro", "Baltazar", , "pedrobtz@gmail.com",
            role = c("aut", "cre", "cph")),
@@ -19,14 +19,17 @@ Authors@R: c(
     person("Other contributors to libjpeg-turbo", role = "cph",
            comment = "see inst/COPYRIGHTS")
   )
-Description: Decodes and encodes 'PNG', 'JPEG', 'WebP' and 'QOI' images
-    with every codec compiled into the package, so installing it needs no
-    system image library. Images decode to a native raster or to an integer
-    or double array at 8 or 16 bits, and encode from the same shapes.
-    Headers and metadata, including 'ICC' profiles and 'EXIF' orientation,
-    are read without decoding pixels, and every size an image declares is
-    checked before memory is allocated. The codecs are also available to
-    other packages' C code through a registered function table.
+Description: Decodes and encodes Portable Network Graphics ('PNG'), Joint
+    Photographic Experts Group ('JPEG'), 'WebP' and Quite OK Image ('QOI')
+    images with every codec compiled into the package, so installing it
+    needs no system image library. Images decode to a native raster or to
+    an integer or double array at 8 or 16 bits, and encode from the same
+    shapes. Headers and metadata, including International Color Consortium
+    ('ICC') profiles and Exchangeable Image File Format ('EXIF')
+    orientation, are read without decoding pixels, and every size an image
+    declares is checked before memory is allocated. The codecs are also
+    available to other packages' C code through a registered function
+    table.
 License: MIT + file LICENSE
 Copyright: file inst/COPYRIGHTS
 Depends: 

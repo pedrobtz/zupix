@@ -16,7 +16,8 @@ is none of these.
 }
 \description{
 Reads the signature at the start of a file or raw vector. The file's
-extension is never consulted.
+extension is never consulted. A connection that is already open is left
+16 bytes further on, so open a new one to read the image.
 }
 \examples{
 pix_format(as.raw(c(0x71, 0x6f, 0x69, 0x66)))

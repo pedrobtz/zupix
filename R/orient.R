@@ -11,7 +11,8 @@
 #'   left to right, 3 rotated 180 degrees, 4 mirrored top to bottom, 5
 #'   transposed, 6 rotated 90 degrees clockwise, 7 transverse, 8 rotated 90
 #'   degrees anticlockwise. `NA` leaves the image as it is.
-#' @return `img`, reoriented, with its class and `bits` attribute kept.
+#' @return `img`, reoriented, with its class and its `bits` and `animated`
+#'   attributes kept.
 #' @export
 #' @examples
 #' f <- system.file("extdata", "gradient.png", package = "zupix")
@@ -40,7 +41,7 @@ pix_orient <- function(img, orientation) {
   if (is.na(orientation) || orientation == 1L) {
     return(img)
   }
-  attrs <- attributes(img)[c("class", "channels", "bits")]
+  attrs <- attributes(img)[c("class", "channels", "bits", "animated")]
   attrs <- attrs[!vapply(attrs, is.null, NA)]
 
   if (native) {

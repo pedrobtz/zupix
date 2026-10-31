@@ -34,6 +34,8 @@ zpx_status zpx_int_encode_qoi(const uint8_t *src, uint32_t width,
   desc.channels = (unsigned char) channels;
   desc.colorspace = (unsigned char) (colourspace ? QOI_LINEAR : QOI_SRGB);
   out = qoi_encode(src, &desc, &len);
+  /* Untested: qoi_encode() fails only on allocation, `desc` having been
+   * checked above, and R's sink only when out of memory (zpx_sink.c). */
   if (out == NULL) return ZPX_ERR_MEMORY;
   failed = write(closure, (const uint8_t *) out, (size_t) len);
   QOI_FREE(out);
@@ -82,6 +84,7 @@ zpx_status zpx_int_qoi_decode(const uint8_t *buf, size_t len, uint32_t width,
     return ZPX_ERR_DECODE;
   }
   if (len > INT_MAX) {
+    /* Untested: needs a 2 GiB input, too large for the test suite. */
     *detail = "QOI input over 2 GiB";
     return ZPX_ERR_UNSUPPORTED;
   }
@@ -95,6 +98,9 @@ zpx_status zpx_int_qoi_decode(const uint8_t *buf, size_t len, uint32_t width,
     return ZPX_ERR_DECODE;
   }
   if (desc.width != width || desc.height != height) {
+    /* Untested: qoi_decode() reads the same header bytes the scanner did,
+     * so the sizes cannot differ; kept so that a change to either side
+     * fails safe. */
     QOI_FREE(rgba);
     *detail = "the container and the decoder disagree on the image size";
     return ZPX_ERR_DECODE;

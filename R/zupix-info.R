@@ -2,7 +2,7 @@
 # installed, so this copy is checked against the manifest by
 # tools/vendor/verify; the versions themselves are read from the compiled
 # code, and the tests assert they match.
-vendored <- data.frame(
+vendored_libraries <- data.frame(
   name = c("wuffs", "libjpeg-turbo", "libwebp", "qoi"),
   pinned = c("0.4.0-alpha.12+4048.20261020", "3.2.1", "1.6.0", "ffb2d2c"),
   commit = c(
@@ -43,10 +43,11 @@ vendored <- data.frame(
 #' info$zlib
 zupix_info <- function() {
   compiled <- .Call(zpx_r_versions)
-  out <- vendored
+  out <- vendored_libraries
+  # qoi.h has no releases: its version is the commit it is pinned to.
   out$version <- unname(c(
     compiled[c("wuffs", "libjpeg-turbo", "libwebp")],
-    "ffb2d2c"
+    vendored_libraries$pinned[[4L]]
   ))
   out <- out[c("name", "version", "commit", "patches", "used_for")]
   list(

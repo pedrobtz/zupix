@@ -9,6 +9,27 @@ test_that("a tiny file declaring 10^6 x 10^6 fails before allocating", {
   expect_identical(err$cap, 65535)
 })
 
+test_that("max_side applies to the height as well as the width", {
+  err <- expect_error(
+    pix_read(declared_png(1, 70000)),
+    class = "zupix_limit_error"
+  )
+  expect_identical(err$limit, "max_side")
+  expect_identical(err$value, 70000)
+  expect_identical(err$cap, 65535)
+
+  tall <- make_png(samples_for(5L, 2L, 1L, 255L), 2L, 0L)
+  err <- expect_error(
+    pix_read(tall, limits = pix_limits(max_side = 4)),
+    class = "zupix_limit_error"
+  )
+  expect_identical(c(err$value, err$cap), c(5, 4))
+  expect_identical(
+    dim(pix_read(tall, as = "integer", limits = pix_limits(max_side = 5))),
+    c(5L, 2L)
+  )
+})
+
 test_that("max_pixels is checked on width times height", {
   p <- declared_png(30000, 30000)
   err <- expect_error(pix_read(p), class = "zupix_limit_error")
@@ -40,6 +61,67 @@ test_that("max_bytes counts the result's size, which depends on `as`", {
   expect_match(conditionMessage(err), "as = \"native\"", fixed = TRUE)
   # Within the limit natively, so the failure moves on to the missing pixels.
   expect_error(pix_read(p, limits = lim), class = "zupix_decode_error")
+})
+
+test_that("max_bytes counts the work buffer and the RGBA intermediate", {
+  # 200 RGBA pixels: 800 bytes natively, 6,400 as doubles.
+  p <- make_png(samples_for(10L, 20L, 4L, 255L), 20L, 6L)
+  # The decoder's work buffer alone is checked first, before the result.
+  err <- expect_error(
+    pix_read(p, limits = pix_limits(max_bytes = 1)),
+    class = "zupix_limit_error"
+  )
+  expect_identical(err$limit, "max_bytes")
+  expect_identical(err$cap, 1)
+  work <- err$value
+  expect_gt(work, 1)
+  expect_lt(work, 6400)
+
+  # An array result also needs the row-major RGBA copy it is built from.
+  err <- expect_error(
+    pix_read(p, as = "double", limits = pix_limits(max_bytes = 6400 + work)),
+    class = "zupix_limit_error"
+  )
+  expect_identical(err$value, 6400 + 800 + work)
+  expect_identical(err$cap, 6400 + work)
+  err <- expect_error(
+    pix_read(p, as = "integer", limits = pix_limits(max_bytes = 3200 + work)),
+    class = "zupix_limit_error"
+  )
+  expect_identical(err$value, 3200 + 800 + work)
+  full <- pix_limits(max_bytes = 6400 + 800 + work)
+  expect_identical(
+    dim(pix_read(p, as = "double", limits = full)),
+    c(10L, 20L, 4L)
+  )
+  # A nativeRaster is decoded in place, with no copy.
+  native <- pix_read(p, limits = pix_limits(max_bytes = 800 + work))
+  expect_s3_class(native, "nativeRaster")
+})
+
+test_that("max_bytes counts qoi.h's own buffer for QOI", {
+  # 200 pixels: 800 bytes as a nativeRaster, and 800 in qoi.h's buffer.
+  q <- make_qoi_runs(10L, 20L, c(1L, 2L, 3L))
+  err <- expect_error(
+    pix_read(q, limits = pix_limits(max_bytes = 799)),
+    class = "zupix_limit_error"
+  )
+  expect_identical(c(err$value, err$cap), c(800, 799))
+  err <- expect_error(
+    pix_read(q, limits = pix_limits(max_bytes = 1599)),
+    class = "zupix_limit_error"
+  )
+  expect_identical(c(err$value, err$cap), c(1600, 1599))
+  expect_s3_class(
+    pix_read(q, limits = pix_limits(max_bytes = 1600)),
+    "nativeRaster"
+  )
+  # As doubles: 4,800 for the result, 800 for the RGBA copy, 800 for qoi.h.
+  err <- expect_error(
+    pix_read(q, as = "double", limits = pix_limits(max_bytes = 5599)),
+    class = "zupix_limit_error"
+  )
+  expect_identical(err$value, 6400)
 })
 
 test_that("max_bytes caps the input read from a file or connection", {
@@ -74,5 +156,11 @@ test_that("pix_limits() validates and takes session defaults from options", {
 })
 
 test_that("limits print", {
-  expect_output(print(pix_limits()), "max_pixels")
+  withr::local_options(
+    zupix.max_side = NULL,
+    zupix.max_pixels = NULL,
+    zupix.max_bytes = NULL,
+    zupix.max_metadata = NULL
+  )
+  expect_snapshot(print(pix_limits()))
 })

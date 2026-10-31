@@ -61,7 +61,9 @@ zpx_limit_error <- function(limit, value, cap, message, call = sys.call(-1L)) {
   )
 }
 
-# zpx_status in src/zpx_core.h, in order from ZPX_ERR_FORMAT.
+# zpx_status in inst/include/zupix.h, in order from ZPX_ERR_FORMAT. The
+# last, ZPX_ERR_SINK, is the encoder's sink failing: from R the sink is a
+# growable buffer (src/zpx_sink.c), which fails only when out of memory.
 zpx_status_kinds <- c(
   "format",
   "decode",
@@ -70,13 +72,16 @@ zpx_status_kinds <- c(
   "memory",
   "input",
   "encode",
-  "io"
+  "memory"
 )
 
 # zpx_limit_kind in src/zpx_core.h, in order from ZPX_LIMIT_SIDE.
 zpx_limit_names <- c("max_side", "max_pixels", "max_bytes", "max_metadata")
 
 zpx_formats <- c("png", "jpeg", "webp", "qoi")
+
+# How messages name each format.
+zpx_format_labels <- c(png = "PNG", jpeg = "JPEG", webp = "WebP", qoi = "QOI")
 
 # Raises the condition a C-level zupix_failure describes.
 zpx_raise_failure <- function(f, format, call = sys.call(-1L)) {
@@ -85,7 +90,7 @@ zpx_raise_failure <- function(f, format, call = sys.call(-1L)) {
   } else {
     "internal"
   }
-  fmt <- if (is.na(format)) "image" else toupper(format)
+  fmt <- if (is.na(format)) "image" else zpx_format_labels[[format]]
   if (kind == "limit") {
     limit <- zpx_limit_names[[f$limit]]
     message <- switch(
@@ -111,29 +116,41 @@ zpx_raise_failure <- function(f, format, call = sys.call(-1L)) {
         fmt_num(f$value),
         fmt_num(f$cap)
       ),
-      sprintf("%s exceeds `%s`.", fmt, limit)
+      max_metadata = sprintf(
+        "%s has %s bytes of metadata, more than `max_metadata` (%s).",
+        fmt,
+        fmt_num(f$value),
+        fmt_num(f$cap)
+      )
     )
+    # zpx_limit_error() never returns, nor does any zpx_abort() below.
     zpx_limit_error(limit, f$value, f$cap, message, call = call)
   }
+  # A format mismatch carries format codes, not limit numbers: `cap` is the
+  # format asked for and `value` the one the signature shows.
   if (kind == "format" && f$cap > 0) {
     message <- sprintf(
       "`format` is \"%s\" but the input is %s.",
       zpx_formats[[f$cap]],
-      toupper(zpx_formats[[f$value]])
+      zpx_format_labels[[f$value]]
     )
     zpx_abort(kind, message, format = format, detail = f$detail, call = call)
   }
+  # Wuffs prefixes its messages with its package name ("jpeg: ..."), which
+  # the message already gives as `fmt`.
+  detail <- sub("^[a-z]+: ", "", f$detail)
   message <- switch(
     kind,
     format = "The input is not a PNG, JPEG, WebP or QOI image.",
-    decode = sprintf("Can't decode %s: %s.", fmt, f$detail),
-    unsupported = sprintf("%s uses an unsupported feature: %s.", fmt, f$detail),
+    decode = sprintf("Can't decode %s: %s.", fmt, detail),
+    unsupported = sprintf("%s uses an unsupported feature: %s.", fmt, detail),
     input = paste0(
       toupper(substr(f$detail, 1, 1)),
       substring(f$detail, 2),
       "."
     ),
-    memory = sprintf("Out of memory decoding %s.", fmt),
+    encode = sprintf("Can't encode %s: %s.", fmt, f$detail),
+    memory = sprintf("Not enough memory for this %s.", fmt),
     sprintf("zupix internal error: %s.", f$detail)
   )
   if (kind == "input") {

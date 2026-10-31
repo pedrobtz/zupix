@@ -86,10 +86,17 @@ zpx_status zpx_int_encode_jpeg(const uint8_t *src, uint32_t width,
     *detail = "the EXIF block is too large for a JPEG APP1 segment";
     return ZPX_ERR_ENCODE;
   }
+  /* jpeg_write_icc_profile() splits a profile into APP2 markers of 65,519
+   * bytes and numbers them in one byte: more than 255 wraps the numbering,
+   * and no reader can put the profile back together. */
+  if (opts->icc_len > (size_t) 255 * 65519) {
+    *detail = "the ICC profile is larger than JPEG's 16,707,345 bytes";
+    return ZPX_ERR_ENCODE;
+  }
   row = (size_t) width * (size_t) channels;
 
   ctx = (jpeg_ctx *) calloc(1, sizeof *ctx);
-  if (ctx == NULL) return ZPX_ERR_MEMORY;
+  if (ctx == NULL) return ZPX_ERR_MEMORY; /* Untested: allocation */
   cinfo = &ctx->cinfo;
   cinfo->err = jpeg_std_error(&ctx->jerr);
   cinfo->client_data = &ctx->jmp;
@@ -98,11 +105,23 @@ zpx_status zpx_int_encode_jpeg(const uint8_t *src, uint32_t width,
   ctx->dest.jmp = &ctx->jmp;
 
   if (setjmp(ctx->jmp.env)) {
+    /* An error from libjpeg-turbo is tested (test-write.R); a failed sink
+     * is not: R's sink fails only when out of memory (zpx_sink.c). */
     zpx_status s = ctx->dest.sink_failed ? ZPX_ERR_SINK : ZPX_ERR_ENCODE;
+    int code = ctx->jmp.code;
+    /* libjpeg-turbo's message for the error: its table is static, so the
+     * string outlives ctx. A message with printf parameters would need a
+     * buffer that outlives ctx too, so it gives way to a general one. */
+    if (s == ZPX_ERR_ENCODE) {
+      const char *m = code > 0 && code <= ctx->jerr.last_jpeg_message
+                          ? ctx->jerr.jpeg_message_table[code]
+                          : NULL;
+      *detail = m != NULL && strchr(m, '%') == NULL
+                    ? m
+                    : "libjpeg-turbo refused the image or its parameters";
+    }
     jpeg_destroy_compress(&ctx->cinfo);
     free(ctx);
-    if (s == ZPX_ERR_ENCODE)
-      *detail = "libjpeg-turbo failed to encode the image";
     return s;
   }
 

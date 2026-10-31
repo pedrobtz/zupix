@@ -56,18 +56,28 @@ cut_points <- function(n, full) {
   c(head, tail)
 }
 
-# Runs `f(bytes)` and names anything that is neither success nor a zupix
-# condition. One expectation per file keeps the suite fast.
+# The conditions a damaged file may raise. Anything else, an internal or
+# memory error included, is a zupix bug.
+hostile_classes <- c(
+  "zupix_decode_error",
+  "zupix_format_error",
+  "zupix_unsupported_error",
+  "zupix_limit_error"
+)
+
+# Runs `f(bytes)` and names anything that is neither success nor one of
+# hostile_classes. One expectation per file keeps the suite fast.
 not_clean <- function(f, bytes, where) {
-  res <- tryCatch(
+  tryCatch(
     {
       f(bytes)
       NULL
     },
-    zupix_error = function(e) NULL,
     error = function(e) {
-      paste(where, conditionMessage(e))
+      if (inherits(e, hostile_classes)) {
+        return(NULL)
+      }
+      paste(where, class(e)[[1]], conditionMessage(e))
     }
   )
-  res
 }

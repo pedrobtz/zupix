@@ -48,7 +48,7 @@ pix_info <- function(x, format = "auto", limits = pix_limits()) {
     return(info_frame(list()))
   }
   rows <- lapply(inputs, function(one) {
-    bytes <- read_input(one, lim[[3L]], call = call)
+    bytes <- read_input(one, lim[["max_bytes"]], call = call)
     info_one(bytes, format, lim, call)
   })
   info_frame(rows)
@@ -68,7 +68,9 @@ info_frame <- function(rows) {
   col <- function(name, type) {
     vapply(rows, function(r) r[[name]], type)
   }
-  out <- data.frame(
+  # list2DF() takes chrm and cicp as list columns, which data.frame() would
+  # spread, so every column is built here, in its final order.
+  list2DF(list(
     format = col("format", ""),
     width = col("width", 0),
     height = col("height", 0),
@@ -83,34 +85,12 @@ info_frame <- function(rows) {
     orientation = col("orientation", 0L),
     gamma = col("gamma", 0),
     srgb = col("srgb", 0L),
+    chrm = lapply(rows, function(r) r$chrm),
+    cicp = lapply(rows, function(r) r$cicp),
     icc = col("icc", NA),
     exif = col("exif", NA),
-    qoi_linear = col("qoi_linear", NA),
-    stringsAsFactors = FALSE
-  )
-  out$chrm <- lapply(rows, function(r) r$chrm)
-  out$cicp <- lapply(rows, function(r) r$cicp)
-  out[c(
-    "format",
-    "width",
-    "height",
-    "bits",
-    "colour_type",
-    "alpha",
-    "interlaced",
-    "animated",
-    "density_x",
-    "density_y",
-    "density_unit",
-    "orientation",
-    "gamma",
-    "srgb",
-    "chrm",
-    "cicp",
-    "icc",
-    "exif",
-    "qoi_linear"
-  )]
+    qoi_linear = col("qoi_linear", NA)
+  ))
 }
 
 #' Extract an image's ICC profile or EXIF data
@@ -141,7 +121,7 @@ pix_exif <- function(x, format = "auto", limits = pix_limits()) {
 metadata_bytes <- function(x, format, limits, what, call) {
   format <- match_arg(format, c("auto", zpx_formats), "format", call = call)
   lim <- check_limits(limits, call = call)
-  bytes <- read_input(x, lim[[3L]], call = call)
+  bytes <- read_input(x, lim[["max_bytes"]], call = call)
   check_format(bytes, format, call)
   # Each .Call names its routine, so R CMD check can verify it.
   res <- if (what == "icc") {
@@ -173,7 +153,7 @@ check_format <- function(bytes, format, call) {
       sprintf(
         "`format` is \"%s\" but the input is %s.",
         format,
-        toupper(found)
+        zpx_format_labels[[found]]
       ),
       format = found,
       detail = NA_character_,

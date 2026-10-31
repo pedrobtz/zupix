@@ -8,7 +8,7 @@
 \alias{pix_write_webp}
 \title{Write an image}
 \usage{
-pix_write(x, file, format = NULL, ...)
+pix_write(x, file = NULL, format = NULL, ...)
 
 pix_write_png(
   x,
@@ -48,7 +48,8 @@ pix_write_webp(
 \item{file}{A path to write, or \code{NULL} to return the encoded bytes.}
 
 \item{format}{\code{NULL} to use \code{file}'s extension (\code{.png}, \code{.jpg}, \code{.jpeg},
-\code{.webp}, \code{.qoi}), or \code{"png"}, \code{"jpeg"}, \code{"webp"} or \code{"qoi"}.}
+\code{.webp}, \code{.qoi}), or \code{"png"}, \code{"jpeg"}, \code{"webp"} or \code{"qoi"}. Needed
+when \code{file} is \code{NULL}.}
 
 \item{...}{Arguments for the format's writer.}
 
@@ -88,7 +89,8 @@ With \code{file}, \code{file}, invisibly; with \code{file = NULL}, a raw vector.
 }
 \description{
 \code{pix_write()} picks the format from \code{file}'s extension (or \code{format}) and
-passes \code{...} to that format's writer. The writers take the shapes
+passes \code{...} to that format's writer. Without a \code{file}, \code{format} is
+needed, and the encoded bytes are returned. The writers take the shapes
 \code{\link[=pix_read]{pix_read()}} returns:
 }
 \details{

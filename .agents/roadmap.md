@@ -32,7 +32,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | 8 | [Documentation and benchmarks](#stage-8--documentation-and-benchmarks) | quick | [#10](https://github.com/pedrobtz/zupix/issues/10) | [#23](https://github.com/pedrobtz/zupix/pull/23) | 2026-10-31 |
 | 9 | [Full CI](#stage-9--full-ci) | full | [#11](https://github.com/pedrobtz/zupix/issues/11) | [#24](https://github.com/pedrobtz/zupix/pull/24) | 2026-10-31 |
 | 10 | [QOI through qoi.h](#stage-10--qoi-through-qoih) | full | [#25](https://github.com/pedrobtz/zupix/issues/25) | [#26](https://github.com/pedrobtz/zupix/pull/26) | 2026-10-31 |
-| 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#12](https://github.com/pedrobtz/zupix/issues/12) | | |
+| 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#12](https://github.com/pedrobtz/zupix/issues/12) | [#62](https://github.com/pedrobtz/zupix/pull/62) | 2026-10-31 |
 
 ## Stage 0 — Package identity
 
@@ -623,5 +623,9 @@ From design §14, in the expected order:
 - **Wuffs decoding bugs** (Stages 5 and 7). *Decided 2026-10-31 by the
   maintainer:* QOI moves to `qoi.h` (Stage 10); lossy WebP stays on Wuffs
   for v0.1.0, its differences documented and pinned; the VP8X/VP8L failure
-  stays worked around. Reports to google/wuffs are drafted for the
-  maintainer to file.
+  stays worked around. Filed 2026-10-31: google/wuffs
+  [#209](https://github.com/google/wuffs/issues/209) (QOI run index),
+  [#210](https://github.com/google/wuffs/issues/210) (VP8L in VP8X) and
+  [#211](https://github.com/google/wuffs/issues/211) (lossy VP8), and the
+  qoi package's crashes as JohannesFriedrich/qoi4R
+  [#10](https://github.com/JohannesFriedrich/qoi4R/issues/10).
