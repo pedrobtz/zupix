@@ -121,7 +121,7 @@ test_that("every libwebp-test-data file decodes; lossless and alpha exactly", {
   }
 })
 
-test_that("every QOI test image decodes to its PNG's pixels", {
+test_that("every QOI test image decodes to its PNG's pixels and as qoi.h does", {
   d <- file.path(corpus_dir("qoi_test_images"))
   for (q in list.files(d, "[.]qoi$", full.names = TRUE)) {
     n <- basename(q)
@@ -133,13 +133,12 @@ test_that("every QOI test image decodes to its PNG's pixels", {
       as.vector(png),
       info = n
     )
-    if (n == "edgecase.qoi") {
-      # Its PNG has no alpha to compare with. The reference decoder (qoi.h)
-      # gives 10,272 opaque black pixels where Wuffs v0.4.0-alpha.12 gives
-      # transparent black: Wuffs does not enter a QOI_OP_RUN's pixel into
-      # the colour index, so a later QOI_OP_INDEX returns the zeroed slot.
-      # Recorded so a Wuffs update that fixes it shows up here.
-      expect_identical(sum(ours[,, 4] == 0L), 10272L)
+    if (requireNamespace("qoi", quietly = TRUE)) {
+      # Every channel, alpha included, as the reference decoder gives them.
+      # edgecase.qoi is the one Wuffs got wrong (a QOI_OP_RUN's pixel never
+      # entered its colour index), which is why QOI decodes through qoi.h.
+      ref <- qoi::readQOI(q)
+      expect_identical(as.vector(ours), as.vector(ref), info = n)
     }
   }
 })
