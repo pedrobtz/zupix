@@ -210,7 +210,7 @@ zupix in your `NAMESPACE` so its DLL is loaded first, and include
 SEXP my_image_width(SEXP bytes) {
   const zupix_api_v1 *api = zupix_api();
   zpx_info info = {sizeof info};
-  if (api == NULL) Rf_error("zupix is missing or too old");
+  if (api == NULL) Rf_error("zupix speaks another ABI version");
   if (api->probe(RAW(bytes), XLENGTH(bytes), NULL, &info) != ZPX_OK)
     return Rf_ScalarInteger(NA_INTEGER);
   return Rf_ScalarInteger((int) info.width);
@@ -219,7 +219,9 @@ SEXP my_image_width(SEXP bytes) {
 
 The table also decodes into five pixel layouts with any row stride,
 extracts ICC and EXIF data, and encodes all four formats through a
-callback. Nothing in it calls R or raises an R error.
+callback. Nothing in it calls R or raises an R error. Looking the table
+up does: if zupix is not loaded, the first `zupix_api()` raises an R
+error, so make that call from a `.Call` entry point, as above.
 `inst/include/zupix.h` documents every function.
 
 ## Speed

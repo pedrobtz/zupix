@@ -1,6 +1,6 @@
 # Changelog
 
-## zupix 0.0.0.9000
+## zupix 0.1.0
 
 - Initial CRAN submission.
 

@@ -17,7 +17,7 @@ colour management."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">zupix</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -93,7 +93,8 @@ connection, which is read whole (up to <code>max_bytes</code> of <code>limits</c
 
 <dt id="arg-bits">bits<a class="anchor" aria-label="anchor" href="#arg-bits"></a></dt>
 <dd><p><code>NULL</code> keeps the file's depth (1-, 2- and 4-bit PNGs become
-8); <code>8L</code> or <code>16L</code> forces it. Not used by <code>as = "native"</code>.</p></dd>
+8); <code>8L</code> or <code>16L</code> forces it. With <code>as = "native"</code>, which is always 8-bit,
+it must be <code>NULL</code> or <code>8L</code>.</p></dd>
 
 
 <dt id="arg-channels">channels<a class="anchor" aria-label="anchor" href="#arg-channels"></a></dt>
@@ -101,7 +102,8 @@ connection, which is read whole (up to <code>max_bytes</code> of <code>limits</c
 alpha, 3 RGB, 4 RGBA; a palette becomes 3, or 4 when it has
 transparency. A larger number adds channels (grey to RGB, an opaque
 alpha); a smaller one is an error, because removing colour or alpha is
-a colour decision. Not used by <code>as = "native"</code>.</p></dd>
+a colour decision. With <code>as = "native"</code>, which is always RGBA, it must
+be <code>NULL</code> or <code>4L</code>.</p></dd>
 
 
 <dt id="arg-orient">orient<a class="anchor" aria-label="anchor" href="#arg-orient"></a></dt>

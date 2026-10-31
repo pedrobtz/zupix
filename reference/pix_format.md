@@ -1,7 +1,8 @@
 # Identify an image's format
 
 Reads the signature at the start of a file or raw vector. The file's
-extension is never consulted.
+extension is never consulted. A connection that is already open is left
+16 bytes further on, so open a new one to read the image.
 
 ## Usage
 

@@ -1,14 +1,15 @@
 # Write an image
 
 `pix_write()` picks the format from `file`'s extension (or `format`) and
-passes `...` to that format's writer. The writers take the shapes
+passes `...` to that format's writer. Without a `file`, `format` is
+needed, and the encoded bytes are returned. The writers take the shapes
 [`pix_read()`](https://pedrobtz.github.io/zupix/reference/pix_read.md)
 returns:
 
 ## Usage
 
 ``` r
-pix_write(x, file, format = NULL, ...)
+pix_write(x, file = NULL, format = NULL, ...)
 
 pix_write_png(
   x,
@@ -56,7 +57,8 @@ pix_write_webp(
 - format:
 
   `NULL` to use `file`'s extension (`.png`, `.jpg`, `.jpeg`, `.webp`,
-  `.qoi`), or `"png"`, `"jpeg"`, `"webp"` or `"qoi"`.
+  `.qoi`), or `"png"`, `"jpeg"`, `"webp"` or `"qoi"`. Needed when `file`
+  is `NULL`.
 
 - ...:
 

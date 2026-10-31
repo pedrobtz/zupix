@@ -31,7 +31,8 @@ pix_orient(img, orientation)
 
 ## Value
 
-`img`, reoriented, with its class and `bits` attribute kept.
+`img`, reoriented, with its class and its `bits` and `animated`
+attributes kept.
 
 ## Examples
 

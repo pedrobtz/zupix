@@ -47,15 +47,16 @@ pix_read(
 - bits:
 
   `NULL` keeps the file's depth (1-, 2- and 4-bit PNGs become 8); `8L`
-  or `16L` forces it. Not used by `as = "native"`.
+  or `16L` forces it. With `as = "native"`, which is always 8-bit, it
+  must be `NULL` or `8L`.
 
 - channels:
 
   `NULL` keeps the file's channels: 1 grey, 2 grey and alpha, 3 RGB, 4
   RGBA; a palette becomes 3, or 4 when it has transparency. A larger
   number adds channels (grey to RGB, an opaque alpha); a smaller one is
-  an error, because removing colour or alpha is a colour decision. Not
-  used by `as = "native"`.
+  an error, because removing colour or alpha is a colour decision. With
+  `as = "native"`, which is always RGBA, it must be `NULL` or `4L`.
 
 - orient:
 

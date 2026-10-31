@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">zupix</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -237,15 +237,18 @@ R. Declare <code>Imports: zupix</code> and
 <span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>SEXP my_image_width<span class="op">(</span>SEXP bytes<span class="op">)</span> <span class="op">{</span></span>
 <span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="dt">const</span> zupix_api_v1 <span class="op">*</span>api <span class="op">=</span> zupix_api<span class="op">();</span></span>
 <span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  zpx_info info <span class="op">=</span> <span class="op">{</span><span class="kw">sizeof</span> info<span class="op">};</span></span>
-<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>api <span class="op">==</span> NULL<span class="op">)</span> Rf_error<span class="op">(</span><span class="st">"zupix is missing or too old"</span><span class="op">);</span></span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>api <span class="op">==</span> NULL<span class="op">)</span> Rf_error<span class="op">(</span><span class="st">"zupix speaks another ABI version"</span><span class="op">);</span></span>
 <span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="cf">if</span> <span class="op">(</span>api<span class="op">-&gt;</span>probe<span class="op">(</span>RAW<span class="op">(</span>bytes<span class="op">),</span> XLENGTH<span class="op">(</span>bytes<span class="op">),</span> NULL<span class="op">,</span> <span class="op">&amp;</span>info<span class="op">)</span> <span class="op">!=</span> ZPX_OK<span class="op">)</span></span>
 <span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>    <span class="cf">return</span> Rf_ScalarInteger<span class="op">(</span>NA_INTEGER<span class="op">);</span></span>
 <span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a>  <span class="cf">return</span> Rf_ScalarInteger<span class="op">((</span><span class="dt">int</span><span class="op">)</span> info<span class="op">.</span>width<span class="op">);</span></span>
 <span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="op">}</span></span></code></pre></div>
 <p>The table also decodes into five pixel layouts with any row stride,
 extracts ICC and EXIF data, and encodes all four formats through a
-callback. Nothing in it calls R or raises an R error.
-<code>inst/include/zupix.h</code> documents every function.</p>
+callback. Nothing in it calls R or raises an R error. Looking the table
+up does: if zupix is not loaded, the first <code>zupix_api()</code>
+raises an R error, so make that call from a <code>.Call</code> entry
+point, as above. <code>inst/include/zupix.h</code> documents every
+function.</p>
 </div>
 <div class="section level2">
 <h2 id="speed">Speed<a class="anchor" aria-label="anchor" href="#speed"></a>
