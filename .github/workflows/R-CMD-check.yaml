@@ -22,6 +22,11 @@ jobs:
       # Quick on each push to a pull request, full after merge. The
       # `full-ci` label runs the full set on a pull request before merging.
       profile: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-ci') && 'quick' || 'full' }}
+      # CRAN's r-devel-linux-x86_64-debian-gcc NOSUGGESTS and NOLD flavors:
+      # the package with only its hard dependencies installed, and R built
+      # without long doubles. Full profile only.
+      nosuggests: true
+      nold: true
       # The default four legs plus Windows on R-devel. The containers cover
       # R-devel on Linux; nothing else reaches the combination CRAN's own
       # Windows R-devel check runs, which win-builder would have caught. The
