@@ -4,20 +4,41 @@
  * vendored library's frames. Buffers it allocates are freed before it
  * returns. */
 
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "zpx_core.h"
 #include "zpx_table.h"
 
+/* A struct's size in version 1 of zupix.h: up to the end of its last v1
+ * field. A later zupix.h may add fields at the end, so a caller built
+ * against an older header passes a smaller struct_size. Checking against
+ * sizeof would refuse it; checking against the v1 size, and reading only
+ * the fields struct_size covers, keeps it working. */
+#define V1_SIZE(type, last) \
+  (offsetof(type, last) + sizeof(((type *) 0)->last))
+
+/* Copies the fields of a caller's struct that its struct_size covers over
+ * `dst`, which holds the defaults. */
+static void take(void *dst, size_t dst_size, const void *src) {
+  size_t n = *(const uint32_t *) src;
+  memcpy(dst, src, n < dst_size ? n : dst_size);
+  *(uint32_t *) dst = (uint32_t) dst_size;
+}
+
+/* The caller's limits over the defaults, or NULL when its struct_size is
+ * smaller than version 1's. */
 static const zpx_limits *limits_or_default(const zpx_limits *l,
                                            zpx_limits *defaults) {
-  if (l != NULL) return l;
   defaults->struct_size = (uint32_t) sizeof *defaults;
   defaults->max_side = 65535u;
   defaults->max_pixels = 100000000ull;
   defaults->max_bytes = 2147483648ull;
   defaults->max_metadata = 16ull << 20;
+  if (l == NULL) return defaults;
+  if (l->struct_size < V1_SIZE(zpx_limits, max_metadata)) return NULL;
+  take(defaults, sizeof *defaults, l);
   return defaults;
 }
 
@@ -47,9 +68,11 @@ static zpx_status api_probe(const uint8_t *buf, size_t len,
   zpx_limits d;
   zpx_int_probe p;
   zpx_status s;
-  if (buf == NULL || info == NULL || info->struct_size < sizeof *info)
+  const zpx_limits *lim = limits_or_default(limits, &d);
+  if (buf == NULL || info == NULL || lim == NULL ||
+      info->struct_size < V1_SIZE(zpx_info, exif_len))
     return ZPX_ERR_ARGUMENT;
-  s = zpx_int_probe_image(buf, len, limits_or_default(limits, &d), &p);
+  s = zpx_int_probe_image(buf, len, lim, &p);
   if (s != ZPX_OK) return s;
   info->format = p.format;
   info->width = p.width;
@@ -85,7 +108,8 @@ static zpx_status api_decode(const uint8_t *buf, size_t len,
   uint64_t inter;
   uint8_t *tmp;
 
-  if (bpp == 0 || buf == NULL || dst == NULL) return ZPX_ERR_ARGUMENT;
+  if (bpp == 0 || buf == NULL || dst == NULL || lim == NULL)
+    return ZPX_ERR_ARGUMENT;
   s = zpx_int_probe_image(buf, len, lim, &p);
   if (s != ZPX_OK) return s;
   /* Channels may be added, never removed (design D10): no alpha dropped,
@@ -256,52 +280,55 @@ static zpx_status api_encode(zpx_format format, zpx_pixfmt pixfmt,
   if (stride < (size_t) width * bpp) return ZPX_ERR_ARGUMENT;
   /* A caller's options struct must be at least version 1's. */
   if (opts != NULL && *(const uint32_t *) opts <
-                          (format == ZPX_FMT_PNG    ? sizeof(zpx_png_opts)
-                           : format == ZPX_FMT_JPEG ? sizeof(zpx_jpeg_opts)
-                           : format == ZPX_FMT_WEBP ? sizeof(zpx_webp_opts)
-                                                    : sizeof(zpx_qoi_opts)))
+                          (format == ZPX_FMT_PNG
+                               ? V1_SIZE(zpx_png_opts, srgb)
+                           : format == ZPX_FMT_JPEG
+                               ? V1_SIZE(zpx_jpeg_opts, exif_len)
+                           : format == ZPX_FMT_WEBP
+                               ? V1_SIZE(zpx_webp_opts, exif_len)
+                               : V1_SIZE(zpx_qoi_opts, colourspace)))
     return ZPX_ERR_ARGUMENT;
 
   switch (format) {
   case ZPX_FMT_PNG: {
-    zpx_png_opts dflt = {sizeof dflt, 6, NULL, 0, NULL, 0, -1};
+    zpx_png_opts o = {sizeof o, 6, NULL, 0, NULL, 0, -1};
+    if (opts) take(&o, sizeof o, opts);
     s = repack(src, width, height, stride, in_c, in_bits, 0, 0, 0, &tight,
                &c, &bits);
     if (s == ZPX_OK)
-      s = zpx_int_encode_png(tight, width, height, c, bits,
-                             opts ? (const zpx_png_opts *) opts : &dflt,
-                             write, closure, &detail);
+      s = zpx_int_encode_png(tight, width, height, c, bits, &o, write,
+                             closure, &detail);
     break;
   }
   case ZPX_FMT_JPEG: {
-    zpx_jpeg_opts dflt = {sizeof dflt, 90, 2, 0, NULL, 0, NULL, 0};
+    zpx_jpeg_opts o = {sizeof o, 90, 2, 0, NULL, 0, NULL, 0};
+    if (opts) take(&o, sizeof o, opts);
     s = repack(src, width, height, stride, in_c, in_bits, 1, 0, 1, &tight,
                &c, &bits);
     if (s == ZPX_OK)
-      s = zpx_int_encode_jpeg(tight, width, height, c,
-                              opts ? (const zpx_jpeg_opts *) opts : &dflt,
-                              write, closure, &detail);
+      s = zpx_int_encode_jpeg(tight, width, height, c, &o, write, closure,
+                              &detail);
     break;
   }
   case ZPX_FMT_WEBP: {
-    zpx_webp_opts dflt = {sizeof dflt, 75.0f, 0, 4, NULL, 0, NULL, 0};
+    zpx_webp_opts o = {sizeof o, 75.0f, 0, 4, NULL, 0, NULL, 0};
+    if (opts) take(&o, sizeof o, opts);
     s = repack(src, width, height, stride, in_c, in_bits, 1, 1, 0, &tight,
                &c, &bits);
     if (s == ZPX_OK)
-      s = zpx_int_encode_webp(tight, width, height, c,
-                              opts ? (const zpx_webp_opts *) opts : &dflt,
-                              write, closure, &detail);
+      s = zpx_int_encode_webp(tight, width, height, c, &o, write, closure,
+                              &detail);
     break;
   }
   case ZPX_FMT_QOI: {
-    const zpx_qoi_opts *o = (const zpx_qoi_opts *) opts;
+    zpx_qoi_opts o = {sizeof o, 0};
+    if (opts) take(&o, sizeof o, opts);
     if (in_bits != 8) return ZPX_ERR_ARGUMENT;
     s = repack(src, width, height, stride, in_c, in_bits, 0, 1, 0, &tight,
                &c, &bits);
     if (s == ZPX_OK)
-      s = zpx_int_encode_qoi(tight, width, height, c,
-                             o ? o->colourspace : 0, write, closure,
-                             &detail);
+      s = zpx_int_encode_qoi(tight, width, height, c, o.colourspace, write,
+                             closure, &detail);
     break;
   }
   default:

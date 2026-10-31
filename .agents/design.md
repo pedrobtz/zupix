@@ -457,7 +457,9 @@ The table follows `zukomp` §15 and its §26 convergence targets: a
 pure-C99 `inst/include/zupix.h`, an R-only `zupix-r.h` resolving lazily
 through `R_GetCCallable("zupix", "zupix_get_api")` and caching, and
 `NULL` on a version mismatch. A consumer has `Imports` and `LinkingTo:
-zupix` and an `importFrom()` in its `NAMESPACE`.
+zupix` and an `importFrom()` in its `NAMESPACE`. The lookup raises an R
+error when zupix's DLL is not loaded, so the first call belongs in
+R-safe code; the cached table never calls R (amended 2026-10-31, #32).
 
 ```c
 #define ZUPIX_ABI_VERSION 1u
