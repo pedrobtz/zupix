@@ -62,9 +62,9 @@
 <p>zupix compiles every codec into the package and treats every file as hostile:</p>
 <ul>
 <li>
-<strong>No system library.</strong> Installing zupix needs a C compiler and the zlib R is built with, nothing else. Decoding goes through <a href="https://github.com/google/wuffs" class="external-link">Wuffs</a>; encoding through zupix’s own PNG writer, <a href="https://libjpeg-turbo.org/" class="external-link">libjpeg-turbo</a>, <a href="https://developers.google.com/speed/webp" class="external-link">libwebp</a> and <a href="https://qoiformat.org/" class="external-link">qoi.h</a>.</li>
+<strong>No system library.</strong> Installing zupix needs a C compiler and the zlib R is built with, nothing else. PNG, JPEG and WebP decode through <a href="https://github.com/google/wuffs" class="external-link">Wuffs</a> and QOI through <a href="https://qoiformat.org/" class="external-link">qoi.h</a>; encoding goes through zupix’s own PNG writer, <a href="https://libjpeg-turbo.org/" class="external-link">libjpeg-turbo</a>, <a href="https://developers.google.com/speed/webp" class="external-link">libwebp</a> and qoi.h.</li>
 <li>
-<strong>Built for hostile input.</strong> Wuffs’s decoders are memory-safe by construction, and every size an image declares is checked against <code><a href="reference/pix_limits.html">pix_limits()</a></code> before anything is allocated. zupix’s own metadata scanners are fuzzed.</li>
+<strong>Built for hostile input.</strong> Wuffs’s decoders are memory-safe by construction, QOI streams are checked complete before qoi.h decodes them, and every size an image declares is checked against <code><a href="reference/pix_limits.html">pix_limits()</a></code> before anything is allocated. zupix’s own metadata scanners are fuzzed.</li>
 <li>
 <strong>The pixels the file holds.</strong> No colour management, gamma or orientation is applied unless you ask. ICC profiles and EXIF blocks come out as raw bytes, and the EXIF orientation is applied only with <code>orient = TRUE</code>.</li>
 <li>

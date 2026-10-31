@@ -95,7 +95,7 @@
 <p>Growing as stages land; <code>.agents/design.md</code> §4 plans the layers.</p>
 <ul><li>
 <code>src/vendor/&lt;lib&gt;/</code> is upstream code, trimmed by <code>tools/vendor/&lt;lib&gt;.files</code>, pinned and patched by <code>tools/vendor/manifest.tsv</code> and <code>tools/patches/&lt;lib&gt;/</code>. Never edit it by hand: change a patch and re-run <code>tools/vendor/fetch</code>.</li>
-<li>Wuffs and <code>qoi.h</code> are single files compiled through one zupix translation unit each (<code>src/zpx_wuffs.c</code>, <code>src/zpx_qoi.c</code>), which set the module and implementation macros. libjpeg-turbo and libwebp compile file by file from the object lists in <code>src/Makevars</code>.</li>
+<li>Wuffs and <code>qoi.h</code> are single files compiled through one zupix translation unit each (<code>src/zpx_wuffs.c</code>, <code>src/zpx_qoi.c</code>), which set the module and implementation macros. Wuffs builds PNG, JPEG and WebP only; <code>zpx_qoi.c</code> encodes and decodes QOI. libjpeg-turbo and libwebp compile file by file from the object lists in <code>src/Makevars</code>.</li>
 <li>
 <code>src/jpeg-config/</code> holds zupix’s hand-written stand-ins for the headers libjpeg-turbo’s CMake build generates.</li>
 <li>The core (<code>src/zpx_core.h</code> and the <code>zpx_*.c</code> it declares) includes no R header. <code>zpx_decode.c</code> sees only Wuffs’s declarations and calls each format’s decoder functions directly: Wuffs’s generic <code>wuffs_base__image_decoder</code> trips clang’s <code>-fsanitize=function</code>.</li>
@@ -125,7 +125,7 @@
 <li>
 <strong>Only <code>R_init_zupix</code> is exported</strong> from the shared object. No <code>wuffs_</code>, <code>jpeg_</code>, <code>jinit</code>, <code>WebP</code> or <code>qoi_</code> symbol may leak, or zupix collides with any other package that links those libraries; <code>test-abi.R</code> checks the symbol table (design §9).</li>
 <li>
-<strong>Decoders and encoders come from different code</strong> (D2): Wuffs decodes, while zupix’s own PNG writer, libjpeg-turbo’s compressor, libwebp’s encoder and <code>qoi.h</code> encode. Don’t pull a vendored library’s decoder in for convenience; hostile input goes only through Wuffs.</li>
+<strong>Hostile input goes only through Wuffs and <code>qoi.h</code>.</strong> PNG, JPEG and WebP decode through Wuffs; QOI through <code>qoi.h</code> (D1, amended 2026-10-31, because Wuffs decodes QOI wrongly), after <code>zpx_qoi.c</code> has checked the chunk stream is complete. Encoders are separate code: zupix’s PNG writer, libjpeg-turbo’s compressor, libwebp’s encoder. Don’t pull a vendored library’s decoder in for convenience.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="testing-conventions">Testing conventions<a class="anchor" aria-label="anchor" href="#testing-conventions"></a></h2>

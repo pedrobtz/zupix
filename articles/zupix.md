@@ -251,15 +251,12 @@ package bundles IJG libjpeg 9e, which upsamples colour differently, so
 colour JPEGs read with it differ from zupix’s by a few levels near sharp
 edges.
 
-Two differences come from the version of Wuffs zupix bundles
-(v0.4.0-alpha.12):
+One difference comes from the version of Wuffs zupix bundles
+(v0.4.0-alpha.12): on 8 of the 131 files in libwebp’s test suite, lossy
+WebP colour decodes up to 32 levels away from libwebp’s output, though
+lossy WebP is specified to decode exactly. Alpha, and lossless WebP, are
+exact. The tests pin these files, so an update of Wuffs that fixes them
+shows up.
 
-- **Some lossy WebP files.** On 8 of the 131 files in libwebp’s test
-  suite, lossy colour decodes up to 32 levels away from libwebp’s
-  output, though lossy WebP is specified to decode exactly. Alpha, and
-  lossless WebP, are exact.
-- **One QOI test image.** On `edgecase.qoi` from the QOI test images,
-  10,272 pixels decode as transparent black where the reference decoder
-  gives opaque black.
-
-The tests pin both, so an update of Wuffs that fixes them shows up.
+QOI decodes through the format’s reference decoder, qoi.h, and matches
+it exactly on every QOI test image.
