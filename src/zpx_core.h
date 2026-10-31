@@ -155,6 +155,12 @@ zpx_status zpx_int_encode_webp(const uint8_t *src, uint32_t width,
                                const zpx_webp_opts *opts, zpx_write_fn write,
                                void *closure, const char **detail);
 
+/* zpx_qoi.c: QOI through qoi.h, into RGBA8 rows of `stride`; the
+ * stream is checked complete before decoding. */
+zpx_status zpx_int_qoi_decode(const uint8_t *buf, size_t len, uint32_t width,
+                              uint32_t height, uint8_t *dst, size_t stride,
+                              const char **detail);
+
 /* RGB or RGBA bytes; colourspace 0 sRGB, 1 linear. */
 zpx_status zpx_int_encode_qoi(const uint8_t *src, uint32_t width,
                               uint32_t height, int channels, int colourspace,

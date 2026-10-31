@@ -1,5 +1,6 @@
 /* The one translation unit that compiles Wuffs's implementation. Only the
- * modules zupix decodes with are built (design §4.1). Wuffs's functions stay
+ * modules zupix decodes with are built (design §4.1): PNG, JPEG and WebP;
+ * QOI decodes through qoi.h (zpx_qoi.c). Wuffs's functions stay
  * extern rather than static (WUFFS_CONFIG__STATIC_FUNCTIONS would leave the
  * unused ones as -Wunused-function warnings); $(C_VISIBILITY) keeps them out
  * of the shared object's exports. */
@@ -15,7 +16,6 @@
 #define WUFFS_CONFIG__MODULE__JPEG
 #define WUFFS_CONFIG__MODULE__VP8
 #define WUFFS_CONFIG__MODULE__WEBP
-#define WUFFS_CONFIG__MODULE__QOI
 
 #include "vendor/wuffs/wuffs-v0.4.c"
 

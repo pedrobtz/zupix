@@ -42,7 +42,7 @@ jobs:
     uses: pedrobtz/r-actions/.github/workflows/fuzz.yml@v1
     with:
       harness: fuzz/${{ matrix.target }}.c
-      sources: src/zpx_decode.c src/zpx_scan.c src/zpx_sniff.c src/zpx_wuffs.c fuzz/fuzz_common.c
+      sources: src/zpx_decode.c src/zpx_scan.c src/zpx_sniff.c src/zpx_wuffs.c src/zpx_qoi.c fuzz/fuzz_common.c
       # zlib is the one library linked; fuzz.yml takes no linker flags, so it
       # rides in cflags, kept by --no-as-needed although it precedes the
       # objects that need it.
@@ -56,7 +56,7 @@ jobs:
     uses: pedrobtz/r-actions/.github/workflows/fuzz.yml@v1
     with:
       harness: fuzz/fuzz_roundtrip.c
-      sources: src/zpx_decode.c src/zpx_scan.c src/zpx_sniff.c src/zpx_wuffs.c src/zpx_png_write.c src/zpx_sink.c src/zpx_qoi.c fuzz/fuzz_common.c
+      sources: src/zpx_decode.c src/zpx_scan.c src/zpx_sniff.c src/zpx_wuffs.c src/zpx_qoi.c src/zpx_png_write.c src/zpx_sink.c fuzz/fuzz_common.c
       cflags: -g -O1 -fno-omit-frame-pointer -Iinst/include -Isrc -Ifuzz -Wl,--no-as-needed -lz
       seed-corpus: fuzz/corpus/seed/fuzz_roundtrip
       max-total-time: ${{ (github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'fuzz-long')) && 600 || 60 }}

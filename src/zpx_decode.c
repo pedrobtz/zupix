@@ -17,7 +17,6 @@
 #define WUFFS_CONFIG__MODULE__JPEG
 #define WUFFS_CONFIG__MODULE__VP8
 #define WUFFS_CONFIG__MODULE__WEBP
-#define WUFFS_CONFIG__MODULE__QOI
 #include "vendor/wuffs/wuffs-v0.4.c"
 
 #include "zpx_core.h"
@@ -49,10 +48,8 @@ static wuffs_base__status decode_image_config(zpx_decoder *d,
     return wuffs_png__decoder__decode_image_config(d->mem, ic, src);
   case ZPX_FMT_JPEG:
     return wuffs_jpeg__decoder__decode_image_config(d->mem, ic, src);
-  case ZPX_FMT_WEBP:
-    return wuffs_webp__decoder__decode_image_config(d->mem, ic, src);
   default:
-    return wuffs_qoi__decoder__decode_image_config(d->mem, ic, src);
+    return wuffs_webp__decoder__decode_image_config(d->mem, ic, src);
   }
 }
 
@@ -60,8 +57,7 @@ static uint64_t workbuf_len(zpx_decoder *d) {
   switch (d->format) {
   case ZPX_FMT_PNG: return wuffs_png__decoder__workbuf_len(d->mem).max_incl;
   case ZPX_FMT_JPEG: return wuffs_jpeg__decoder__workbuf_len(d->mem).max_incl;
-  case ZPX_FMT_WEBP: return wuffs_webp__decoder__workbuf_len(d->mem).max_incl;
-  default: return wuffs_qoi__decoder__workbuf_len(d->mem).max_incl;
+  default: return wuffs_webp__decoder__workbuf_len(d->mem).max_incl;
   }
 }
 
@@ -75,10 +71,8 @@ static wuffs_base__status decode_frame(zpx_decoder *d,
     return wuffs_png__decoder__decode_frame(d->mem, pb, src, b, work, NULL);
   case ZPX_FMT_JPEG:
     return wuffs_jpeg__decoder__decode_frame(d->mem, pb, src, b, work, NULL);
-  case ZPX_FMT_WEBP:
-    return wuffs_webp__decoder__decode_frame(d->mem, pb, src, b, work, NULL);
   default:
-    return wuffs_qoi__decoder__decode_frame(d->mem, pb, src, b, work, NULL);
+    return wuffs_webp__decoder__decode_frame(d->mem, pb, src, b, work, NULL);
   }
 }
 
@@ -92,7 +86,6 @@ static zpx_status new_decoder(zpx_format format, zpx_decoder *d,
   case ZPX_FMT_PNG: size = sizeof__wuffs_png__decoder(); break;
   case ZPX_FMT_JPEG: size = sizeof__wuffs_jpeg__decoder(); break;
   case ZPX_FMT_WEBP: size = sizeof__wuffs_webp__decoder(); break;
-  case ZPX_FMT_QOI: size = sizeof__wuffs_qoi__decoder(); break;
   default:
     *detail = "not a PNG, JPEG, WebP or QOI signature";
     return ZPX_ERR_FORMAT;
@@ -106,11 +99,8 @@ static zpx_status new_decoder(zpx_format format, zpx_decoder *d,
   case ZPX_FMT_JPEG:
     st = wuffs_jpeg__decoder__initialize(d->mem, size, WUFFS_VERSION, 0);
     break;
-  case ZPX_FMT_WEBP:
-    st = wuffs_webp__decoder__initialize(d->mem, size, WUFFS_VERSION, 0);
-    break;
   default:
-    st = wuffs_qoi__decoder__initialize(d->mem, size, WUFFS_VERSION, 0);
+    st = wuffs_webp__decoder__initialize(d->mem, size, WUFFS_VERSION, 0);
     break;
   }
   if (!wuffs_base__status__is_ok(&st)) {
@@ -176,6 +166,15 @@ static zpx_status probe(const uint8_t *buf, size_t len,
   pixels = (uint64_t) out->width * (uint64_t) out->height;
   if (pixels > limits->max_pixels)
     return limit(out, ZPX_LIMIT_PIXELS, pixels, limits->max_pixels);
+
+  if (m->format == ZPX_FMT_QOI) {
+    /* QOI decodes through qoi.h (zpx_qoi.c), whose own output buffer,
+     * width * height * 4, stands in for a work buffer. */
+    out->workbuf_len = pixels * 4u;
+    if (out->workbuf_len > limits->max_bytes)
+      return limit(out, ZPX_LIMIT_BYTES, out->workbuf_len, limits->max_bytes);
+    return ZPX_OK;
+  }
 
   if (m->format == ZPX_FMT_WEBP && (m->animated || m->webp_rebuild)) {
     /* D13: an animated file's first frame. Wuffs decodes still WebP only,
@@ -313,6 +312,17 @@ zpx_status zpx_int_decode_image(const uint8_t *buf, size_t len,
                            stride * out->height > dst_len))) {
     out->detail = "destination buffer is too small";
     s = ZPX_ERR_ARGUMENT;
+    goto done;
+  }
+
+  if (out->format == ZPX_FMT_QOI) {
+    if (pixfmt != ZPX_PIX_RGBA8) {
+      out->detail = "QOI is 8-bit";
+      s = ZPX_ERR_ARGUMENT;
+      goto done;
+    }
+    s = zpx_int_qoi_decode(buf, len, out->width, out->height, dst, stride,
+                           &out->detail);
     goto done;
   }
 

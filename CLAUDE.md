@@ -106,7 +106,8 @@ Growing as stages land; `.agents/design.md` §4 plans the layers.
   hand: change a patch and re-run `tools/vendor/fetch`.
 - Wuffs and `qoi.h` are single files compiled through one zupix
   translation unit each (`src/zpx_wuffs.c`, `src/zpx_qoi.c`), which set
-  the module and implementation macros. libjpeg-turbo and libwebp compile
+  the module and implementation macros. Wuffs builds PNG, JPEG and WebP
+  only; `zpx_qoi.c` encodes and decodes QOI. libjpeg-turbo and libwebp compile
   file by file from the object lists in `src/Makevars`.
 - `src/jpeg-config/` holds zupix's hand-written stand-ins for the headers
   libjpeg-turbo's CMake build generates.
@@ -176,10 +177,12 @@ not show.
   `wuffs_`, `jpeg_`, `jinit`, `WebP` or `qoi_` symbol may leak, or
   zupix collides with any other package that links those libraries;
   `test-abi.R` checks the symbol table (design §9).
-- **Decoders and encoders come from different code** (D2): Wuffs
-  decodes, while zupix's own PNG writer, libjpeg-turbo's compressor,
-  libwebp's encoder and `qoi.h` encode. Don't pull a vendored library's
-  decoder in for convenience; hostile input goes only through Wuffs.
+- **Hostile input goes only through Wuffs and `qoi.h`.** PNG, JPEG and WebP
+  decode through Wuffs; QOI through `qoi.h` (D1, amended 2026-10-31,
+  because Wuffs decodes QOI wrongly), after `zpx_qoi.c` has checked the
+  chunk stream is complete. Encoders are separate code: zupix's PNG writer,
+  libjpeg-turbo's compressor, libwebp's encoder. Don't pull a vendored
+  library's decoder in for convenience.
 
 ## Testing conventions
 

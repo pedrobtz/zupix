@@ -642,11 +642,16 @@ All **(C)**: this RFC decides, and the maintainer may overturn.
 **2026-10-30: the maintainer accepted D1 to D18 as written** before
 Stage 1 started; they stand as maintainer decisions from that date.
 
-- **D1 (C).** Decode all four formats with Wuffs, pinned to a
-  `v0.4.0-alpha` tag by commit and sha256, pragmas patched out. Memory
-  safety is the point for hostile input, and caller-allocated buffers
-  make §6.5 enforceable. The cost is an alpha upstream; the core hides
-  it, and Stage 0's gate falls back to the reference decoders.
+- **D1 (C), amended 2026-10-31 by the maintainer:** QOI decodes through the
+  reference `qoi.h` instead, behind zupix's own check that the chunk stream is
+  complete; Wuffs v0.4.0-alpha.12 decodes QOI wrongly (a `QOI_OP_RUN`'s pixel
+  never enters its colour index). PNG, JPEG and WebP stay on Wuffs; its
+  lossy-WebP differences from libwebp are documented and reported upstream. As
+  first written: Decode all four formats with Wuffs, pinned to a
+  `v0.4.0-alpha` tag by commit and sha256, pragmas patched out. Memory safety
+  is the point for hostile input, and caller-allocated buffers make §6.5
+  enforceable. The cost is an alpha upstream; the core hides it, and Stage 0's
+  gate falls back to the reference decoders.
 - **D2 (C).** Encoders: `zupix`'s PNG writer, libjpeg-turbo's compressor
   (8-bit, no SIMD, arithmetic or lossless), libwebp 1.6.0's encoder,
   `qoi.h`. Decoders and encoders deliberately come from different code.
