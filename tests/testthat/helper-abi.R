@@ -40,11 +40,32 @@ exported_symbols <- function() {
   setdiff(names, c("_init", "_fini", "_edata", "_end", "__bss_start", ""))
 }
 
-# A coverage or sanitizer runtime exports symbols of its own.
+# A coverage or sanitizer runtime exports symbols of its own: gcov's
+# __gcov_*, clang's __llvm_gcov_*, llvm_gcda_* and __llvm_profile_*, and
+# the sanitizers' __asan_*, __ubsan_*, __tsan_*, __msan_*, __sancov_* and
+# __sanitizer_*. Matched as prefixes only (after any leading underscores), so
+# a leaked vendored symbol that merely contains those letters is not taken
+# for one and still fails the ABI tests.
+instrumentation_symbol <- function(syms) {
+  runtimes <- c(
+    "gcov_",
+    "llvm_gcov",
+    "llvm_gcda",
+    "llvm_prof",
+    "asan_",
+    "ubsan_",
+    "tsan_",
+    "msan_",
+    "sancov",
+    "sanitizer_"
+  )
+  grepl(paste0("^_*(", paste(runtimes, collapse = "|"), ")"), syms)
+}
+
 is_instrumented_build <- function() {
   if (identical(Sys.getenv("R_COVR"), "true")) {
     return(TRUE)
   }
   syms <- tryCatch(exported_symbols(), condition = function(e) character())
-  any(grepl("gcov|__llvm_prof|asan|ubsan|tsan|msan|sancov", syms))
+  any(instrumentation_symbol(syms))
 }

@@ -6,6 +6,14 @@
 # qoi_encode, which the LTO leg showed.) The C table
 # itself is exercised from outside by tools/zupixtest (abi.yaml).
 
+test_that("only a runtime's own prefixes mark an instrumented build", {
+  runtime <- c("__asan_init", "___ubsan_handle_add_overflow", "__gcov_init")
+  runtime <- c(runtime, "__llvm_profile_runtime", "llvm_gcda_start_file")
+  expect_true(all(instrumentation_symbol(runtime)))
+  leaked <- c("WebPMasanInit", "jpeg_tsan_hook", "zupix_gcov_x", "R_init_zupix")
+  expect_false(any(instrumentation_symbol(leaked)))
+})
+
 test_that("the shared object exports nothing but R_init_zupix", {
   skip_if(
     is_instrumented_build(),
