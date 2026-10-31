@@ -153,7 +153,7 @@ check_format <- function(bytes, format, call) {
       sprintf(
         "`format` is \"%s\" but the input is %s.",
         format,
-        toupper(found)
+        zpx_format_labels[[found]]
       ),
       format = found,
       detail = NA_character_,

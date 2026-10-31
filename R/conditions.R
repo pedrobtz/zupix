@@ -80,6 +80,9 @@ zpx_limit_names <- c("max_side", "max_pixels", "max_bytes", "max_metadata")
 
 zpx_formats <- c("png", "jpeg", "webp", "qoi")
 
+# How messages name each format.
+zpx_format_labels <- c(png = "PNG", jpeg = "JPEG", webp = "WebP", qoi = "QOI")
+
 # Raises the condition a C-level zupix_failure describes.
 zpx_raise_failure <- function(f, format, call = sys.call(-1L)) {
   kind <- if (f$status >= 1L && f$status <= length(zpx_status_kinds)) {
@@ -87,7 +90,7 @@ zpx_raise_failure <- function(f, format, call = sys.call(-1L)) {
   } else {
     "internal"
   }
-  fmt <- if (is.na(format)) "image" else toupper(format)
+  fmt <- if (is.na(format)) "image" else zpx_format_labels[[format]]
   if (kind == "limit") {
     limit <- zpx_limit_names[[f$limit]]
     message <- switch(
@@ -113,7 +116,12 @@ zpx_raise_failure <- function(f, format, call = sys.call(-1L)) {
         fmt_num(f$value),
         fmt_num(f$cap)
       ),
-      sprintf("%s exceeds `%s`.", fmt, limit)
+      max_metadata = sprintf(
+        "%s has %s bytes of metadata, more than `max_metadata` (%s).",
+        fmt,
+        fmt_num(f$value),
+        fmt_num(f$cap)
+      )
     )
     # zpx_limit_error() never returns, nor does any zpx_abort() below.
     zpx_limit_error(limit, f$value, f$cap, message, call = call)
@@ -124,7 +132,7 @@ zpx_raise_failure <- function(f, format, call = sys.call(-1L)) {
     message <- sprintf(
       "`format` is \"%s\" but the input is %s.",
       zpx_formats[[f$cap]],
-      toupper(zpx_formats[[f$value]])
+      zpx_format_labels[[f$value]]
     )
     zpx_abort(kind, message, format = format, detail = f$detail, call = call)
   }
