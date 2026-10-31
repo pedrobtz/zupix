@@ -32,7 +32,7 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | 8 | [Documentation and benchmarks](#stage-8--documentation-and-benchmarks) | quick | [#10](https://github.com/pedrobtz/zupix/issues/10) | [#23](https://github.com/pedrobtz/zupix/pull/23) | 2026-10-31 |
 | 9 | [Full CI](#stage-9--full-ci) | full | [#11](https://github.com/pedrobtz/zupix/issues/11) | [#24](https://github.com/pedrobtz/zupix/pull/24) | 2026-10-31 |
 | 10 | [QOI through qoi.h](#stage-10--qoi-through-qoih) | full | [#25](https://github.com/pedrobtz/zupix/issues/25) | [#26](https://github.com/pedrobtz/zupix/pull/26) | 2026-10-31 |
-| 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#12](https://github.com/pedrobtz/zupix/issues/12) | | |
+| 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#12](https://github.com/pedrobtz/zupix/issues/12) | [#62](https://github.com/pedrobtz/zupix/pull/62) | 2026-10-31 |
 
 ## Stage 0 — Package identity
 
