@@ -184,7 +184,8 @@ static zpx_status probe(const uint8_t *buf, size_t len,
     /* D13: an animated file's first frame. Wuffs decodes still WebP only,
      * so the frame's chunks are rebuilt as one; compositing a frame smaller
      * than the canvas is not implemented. An extended still file with a
-     * VP8L bitstream is rebuilt the same way (see zpx_meta.webp_rebuild). */
+     * VP8L bitstream is rebuilt the same way (see zpx_meta.webp_rebuild;
+     * https://github.com/google/wuffs/issues/210). */
     if (m->frame_len == 0) {
       out->detail = "animated WebP has no frames";
       return ZPX_ERR_DECODE;

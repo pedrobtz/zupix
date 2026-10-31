@@ -108,6 +108,7 @@ test_that("every libwebp-test-data file decodes; lossless and alpha exactly", {
   # these files, in the colour channels only, though VP8 is specified
   # bit-exactly (RFC 6386); measured 2026-10-30, worst difference in
   # levels. Recorded so a Wuffs update that fixes them shows up here.
+  # Reported as https://github.com/google/wuffs/issues/211.
   known <- c(
     bryce = 11,
     lossy_alpha1 = 12,
@@ -152,7 +153,8 @@ test_that("every QOI test image decodes to its PNG's pixels and as qoi.h does", 
     if (requireNamespace("qoi", quietly = TRUE)) {
       # Every channel, alpha included, as the reference decoder gives them.
       # edgecase.qoi is the one Wuffs got wrong (a QOI_OP_RUN's pixel never
-      # entered its colour index), which is why QOI decodes through qoi.h.
+      # entered its colour index, https://github.com/google/wuffs/issues/209),
+      # which is why QOI decodes through qoi.h.
       ref <- qoi::readQOI(q)
       expect_identical(as.vector(ours), as.vector(ref), info = n)
     }

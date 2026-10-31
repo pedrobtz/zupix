@@ -623,5 +623,9 @@ From design §14, in the expected order:
 - **Wuffs decoding bugs** (Stages 5 and 7). *Decided 2026-10-31 by the
   maintainer:* QOI moves to `qoi.h` (Stage 10); lossy WebP stays on Wuffs
   for v0.1.0, its differences documented and pinned; the VP8X/VP8L failure
-  stays worked around. Reports to google/wuffs are drafted for the
-  maintainer to file.
+  stays worked around. Filed 2026-10-31: google/wuffs
+  [#209](https://github.com/google/wuffs/issues/209) (QOI run index),
+  [#210](https://github.com/google/wuffs/issues/210) (VP8L in VP8X) and
+  [#211](https://github.com/google/wuffs/issues/211) (lossy VP8), and the
+  qoi package's crashes as JohannesFriedrich/qoi4R
+  [#10](https://github.com/JohannesFriedrich/qoi4R/issues/10).
