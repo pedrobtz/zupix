@@ -2,6 +2,11 @@
 
 Status: draft 2026-10-30. Implements [design.md](design.md).
 Target: v0.1.0, the first CRAN release.
+Re-planned 2026-10-31: Stage 10, QOI through qoi.h, inserted after Full CI
+by maintainer decision (Wuffs decodes QOI wrongly; D1 amended), and v0.1.0
+readiness renumbered to Stage 11. Stage 10 is `full` and waits for a green
+full run on its merge commit, as Full CI does, so Full CI's result carries
+over to the code readiness starts from.
 Tracking: [v0.1.0 (#1)](https://github.com/pedrobtz/zupix/issues/1), with one
 sub-issue per stage;
 [CRAN-submission (#13)](https://github.com/pedrobtz/zupix/issues/13).
@@ -26,7 +31,8 @@ Stage 10 (readiness), around a new Stage 9, Full CI.
 | 7 | [Conformance, hostile input and fuzzing](#stage-7--conformance-hostile-input-and-fuzzing) | quick | [#9](https://github.com/pedrobtz/zupix/issues/9) | [#22](https://github.com/pedrobtz/zupix/pull/22) | 2026-10-30 |
 | 8 | [Documentation and benchmarks](#stage-8--documentation-and-benchmarks) | quick | [#10](https://github.com/pedrobtz/zupix/issues/10) | [#23](https://github.com/pedrobtz/zupix/pull/23) | 2026-10-31 |
 | 9 | [Full CI](#stage-9--full-ci) | full | [#11](https://github.com/pedrobtz/zupix/issues/11) | [#24](https://github.com/pedrobtz/zupix/pull/24) | 2026-10-31 |
-| 10 | [v0.1.0 readiness](#stage-10--v010-readiness) | full | [#12](https://github.com/pedrobtz/zupix/issues/12) | | |
+| 10 | [QOI through qoi.h](#stage-10--qoi-through-qoih) | full | [#25](https://github.com/pedrobtz/zupix/issues/25) | | 2026-10-31 |
+| 11 | [v0.1.0 readiness](#stage-11--v010-readiness) | full | [#12](https://github.com/pedrobtz/zupix/issues/12) | | |
 
 ## Stage 0 — Package identity
 
@@ -522,7 +528,43 @@ when testthat is absent, as CRAN's no-Suggests check requires.
 
 **Design.** §12.
 
-## Stage 10 — v0.1.0 readiness
+## Stage 10 — QOI through qoi.h
+
+**Issue.** [#25](https://github.com/pedrobtz/zupix/issues/25), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zupix/issues/1).
+
+**CI.** `full — a decoder of untrusted input changes: ASan, valgrind, and
+the fuzz targets; inserted after Full CI, so it also waits for a green full
+run on its merge commit`.
+
+**Goal.** QOI decodes exactly as the format's reference decoder does.
+
+**Work.**
+
+- Decode QOI through `qoi.h`'s `qoi_decode()` (already vendored for
+  encoding), after a bounded pass that checks the chunk stream yields every
+  pixel before the end marker, since `qoi_decode()` repeats the last pixel
+  of a short stream rather than failing.
+- Count `qoi_decode()`'s own output buffer against `max_bytes`.
+- Drop Wuffs's QOI module from the build.
+- Design D1 amended; `zupix_info()`, `CLAUDE.md`, the README and the
+  article updated; the fuzz targets link `zpx_qoi.c`.
+
+**Exit criteria.**
+
+- Every QOI test image decodes as `qoi::readQOI()` does, alpha included
+  (`edgecase.qoi` too), and as its PNG twin.
+- A truncated QOI is a `zupix_decode_error`, never a partial image.
+- A full-profile run is green on the pull request and on the merge commit.
+
+**Design.** D1 (amended), §6.5.
+
+**Recorded 2026-10-31.** Locally: the suite passes with both
+download-only corpora, `edgecase.qoi` exact in every channel; 18,474
+truncations and corruptions of QOI files ran clean through the new path
+under ASan and UBSan; `fuzz/replay.sh` is clean.
+
+## Stage 11 — v0.1.0 readiness
 
 **Issue.** [#12](https://github.com/pedrobtz/zupix/issues/12), sub-issue of
 [v0.1.0](https://github.com/pedrobtz/zupix/issues/1).
@@ -578,9 +620,8 @@ From design §14, in the expected order:
 - **Q6** (Stage 7): the corpus licences.
 - **Q7** (Stage 10): is v0.1.0 a CRAN submission? This roadmap assumes
   `CRAN intent: Planned`.
-- **Wuffs decoding bugs** (found in Stages 5 and 7, all in v0.4.0-alpha.12):
-  VP8L inside a VP8X container fails (worked around by rebuilding the file);
-  lossy VP8 differs from libwebp on 8 of libwebp-test-data's files; QOI's
-  `edgecase` decodes with wrong alpha. Keep Wuffs and report upstream, or
-  decode lossy WebP and QOI with libwebp's decoder and `qoi.h` (a change
-  to D1)? Not reported upstream yet.
+- **Wuffs decoding bugs** (Stages 5 and 7). *Decided 2026-10-31 by the
+  maintainer:* QOI moves to `qoi.h` (Stage 10); lossy WebP stays on Wuffs
+  for v0.1.0, its differences documented and pinned; the VP8X/VP8L failure
+  stays worked around. Reports to google/wuffs are drafted for the
+  maintainer to file.
