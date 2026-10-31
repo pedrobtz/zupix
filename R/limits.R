@@ -77,5 +77,10 @@ check_limits <- function(limits, call = sys.call(-1L)) {
       call = call
     )
   }
-  c(limits$max_side, limits$max_pixels, limits$max_bytes, limits$max_metadata)
+  c(
+    max_side = limits$max_side,
+    max_pixels = limits$max_pixels,
+    max_bytes = limits$max_bytes,
+    max_metadata = limits$max_metadata
+  )
 }

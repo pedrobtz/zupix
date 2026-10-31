@@ -16,7 +16,8 @@ transposed, 6 rotated 90 degrees clockwise, 7 transverse, 8 rotated 90
 degrees anticlockwise. \code{NA} leaves the image as it is.}
 }
 \value{
-\code{img}, reoriented, with its class and \code{bits} attribute kept.
+\code{img}, reoriented, with its class and its \code{bits} and \code{animated}
+attributes kept.
 }
 \description{
 Rotates or flips an image the way its EXIF orientation says it should be

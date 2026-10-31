@@ -141,18 +141,22 @@ SEXP zpx_r_read(SEXP x, SEXP as_, SEXP bits_, SEXP channels_, SEXP format_,
   if (as == 1) {
     if (!Rf_isNull(bits_) && Rf_asInteger(bits_) != 8)
       return failure(ZPX_ERR_ARGUMENT,
-                     "as = \"native\" is 8-bit; `bits` must be NULL or 8",
+                     "`bits` must be NULL or 8 with as = \"native\", "
+                     "which is 8-bit",
                      ZPX_LIMIT_NONE, 0, 0);
     if (!Rf_isNull(channels_) && Rf_asInteger(channels_) != 4)
       return failure(ZPX_ERR_ARGUMENT,
-                     "as = \"native\" is RGBA; `channels` must be NULL or 4",
+                     "`channels` must be NULL or 4 with as = \"native\", "
+                     "which is RGBA",
                      ZPX_LIMIT_NONE, 0, 0);
     bits = 8;
     channels = 4;
   } else {
     bits = Rf_isNull(bits_) ? p.bits : Rf_asInteger(bits_);
     channels = Rf_isNull(channels_) ? p.channels : Rf_asInteger(channels_);
-    if (channels < p.channels)
+    /* Channels may be added, never removed (design D10): an image with
+     * alpha (2 or 4 channels) keeps it, so 1 and 3 are refused for it. */
+    if (channels < p.channels || (p.channels % 2 == 0 && channels % 2 == 1))
       return failure(ZPX_ERR_ARGUMENT,
                      "`channels` would remove channels the image has",
                      ZPX_LIMIT_NONE, (double) channels, (double) p.channels);
@@ -328,6 +332,11 @@ SEXP zpx_r_icc(SEXP x, SEXP limits_) {
   if (s != ZPX_OK) return scan_failure(s, detail, &m, &lim);
   if (m.icc_len == 0) return R_NilValue;
   s = zpx_int_icc(RAW(x), (size_t) XLENGTH(x), &m, &lim, NULL, &n, &detail);
+  /* A PNG profile is limited once inflated: report that size, not the
+   * compressed one the scanner saw. */
+  if (s == ZPX_ERR_LIMIT)
+    return failure(s, detail, ZPX_LIMIT_METADATA, (double) n,
+                   (double) lim.max_metadata);
   if (s != ZPX_OK) return scan_failure(s, detail, &m, &lim);
   out = PROTECT(Rf_allocVector(RAWSXP, (R_xlen_t) n));
   cap = n;
@@ -388,17 +397,33 @@ static double sample_at(SEXP x, R_xlen_t i) {
 SEXP zpx_r_encode(SEXP pixels, SEXP mode_, SEXP dims_, SEXP stored_,
                   SEXP target_, SEXP format_, SEXP opts_) {
   int mode = Rf_asInteger(mode_), format = Rf_asInteger(format_);
-  int h = INTEGER(dims_)[0], w = INTEGER(dims_)[1], c = INTEGER(dims_)[2];
+  int h, w, c;
   int stored = Rf_asInteger(stored_), bits = Rf_asInteger(target_);
   R_xlen_t n = XLENGTH(pixels);
-  size_t pixels_n = (size_t) h * (size_t) w;
-  int out_c = c, bytes;
+  size_t pixels_n;
+  int out_c, bytes;
   double smax, tmax;
   const char *detail = NULL;
   zpx_buffer buf = {NULL, 0, 0};
   zpx_status s;
   SEXP inter;
   uint8_t *dst;
+
+  /* prepare_pixels() checks these in R; checked again here because reading
+   * past the end of `dims_` or `pixels` would not be an R error. */
+  if (TYPEOF(dims_) != INTSXP || XLENGTH(dims_) != 3 ||
+      (TYPEOF(pixels) != INTSXP && (mode == 0 || TYPEOF(pixels) != REALSXP)))
+    return failure(ZPX_ERR_ARGUMENT, "`x` is not a valid image",
+                   ZPX_LIMIT_NONE, 0, 0);
+  h = INTEGER(dims_)[0];
+  w = INTEGER(dims_)[1];
+  c = INTEGER(dims_)[2];
+  if (h < 1 || w < 1 || c < 1 || c > 4 ||
+      (double) h * (double) w * (mode == 0 ? 1.0 : (double) c) != (double) n)
+    return failure(ZPX_ERR_ARGUMENT, "`x` is not a valid image",
+                   ZPX_LIMIT_NONE, 0, 0);
+  pixels_n = (size_t) h * (size_t) w;
+  out_c = c;
 
   /* Validate first: a failure must not leave half an image converted. */
   if (mode == 0) {

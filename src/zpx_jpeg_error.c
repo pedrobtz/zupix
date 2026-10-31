@@ -17,7 +17,7 @@
 
 void zpx_int_jpeg_error_exit(j_common_ptr cinfo) {
   zpx_jpeg_jmp *j = (zpx_jpeg_jmp *) cinfo->client_data;
-  (*cinfo->err->format_message)(cinfo, j->message);
+  j->code = cinfo->err->msg_code;
   longjmp(j->env, 1);
 }
 

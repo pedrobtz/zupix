@@ -19,12 +19,14 @@
 #'   * `"integer"`: the same shape holding the sample values, `0..255` or
 #'     `0..65535`, with attribute `bits` (`8L` or `16L`).
 #' @param bits `NULL` keeps the file's depth (1-, 2- and 4-bit PNGs become
-#'   8); `8L` or `16L` forces it. Not used by `as = "native"`.
+#'   8); `8L` or `16L` forces it. With `as = "native"`, which is always 8-bit,
+#'   it must be `NULL` or `8L`.
 #' @param channels `NULL` keeps the file's channels: 1 grey, 2 grey and
 #'   alpha, 3 RGB, 4 RGBA; a palette becomes 3, or 4 when it has
 #'   transparency. A larger number adds channels (grey to RGB, an opaque
 #'   alpha); a smaller one is an error, because removing colour or alpha is
-#'   a colour decision. Not used by `as = "native"`.
+#'   a colour decision. With `as = "native"`, which is always RGBA, it must
+#'   be `NULL` or `4L`.
 #' @param orient `TRUE` applies the image's EXIF orientation (see
 #'   [pix_orient()]); `FALSE`, the default, returns the pixels as stored.
 #' @param format `"auto"` reads the format from the file's signature, never
@@ -59,7 +61,7 @@ pix_read <- function(
   format <- match_arg(format, c("auto", zpx_formats), "format")
   lim <- check_limits(limits)
 
-  bytes <- read_input(x, lim[[3L]])
+  bytes <- read_input(x, lim[["max_bytes"]])
   res <- .Call(
     zpx_r_read,
     bytes,
@@ -102,7 +104,8 @@ pix_read <- function(
 #' Identify an image's format
 #'
 #' Reads the signature at the start of a file or raw vector. The file's
-#' extension is never consulted.
+#' extension is never consulted. A connection that is already open is left
+#' 16 bytes further on, so open a new one to read the image.
 #'
 #' @inheritParams pix_read
 #' @return `"png"`, `"jpeg"`, `"webp"`, `"qoi"`, or `NA` when the signature
@@ -147,27 +150,25 @@ read_input <- function(x, max_bytes, n = Inf, call = sys.call(-1L)) {
     zpx_abort(kind, paste0(message, "."), arg = arg, call = call)
   }
   fail <- function(message) zpx_abort("io", message, call = call)
-  if (is.character(x) && !is.finite(n) && file.exists(x) && !dir.exists(x)) {
-    size <- file.size(x)
-    if (!is.na(size) && size > max_bytes) {
-      zpx_limit_error(
-        "max_bytes",
-        size,
-        max_bytes,
-        sprintf(
-          "The file has %s bytes, more than `max_bytes` (%s).",
-          fmt_num(size),
-          fmt_num(max_bytes)
-        ),
-        call = call
-      )
-    }
-  }
-  # A regular file of known size is read in one call; anything else (a
-  # connection, a URL) in chunks, stopping at max_bytes.
+  # A regular file of known size is checked against max_bytes before it is
+  # read, then read in one call; anything else (a connection, a URL) is read
+  # in chunks, stopping at max_bytes.
   if (is.character(x) && !is.finite(n) && file.exists(x) && !dir.exists(x)) {
     size <- file.size(x)
     if (!is.na(size)) {
+      if (size > max_bytes) {
+        zpx_limit_error(
+          "max_bytes",
+          size,
+          max_bytes,
+          sprintf(
+            "The file has %s bytes, more than `max_bytes` (%s).",
+            fmt_num(size),
+            fmt_num(max_bytes)
+          ),
+          call = call
+        )
+      }
       return(tryCatch(
         readBin(x, "raw", n = size),
         error = function(e) fail(conditionMessage(e)),
@@ -188,10 +189,11 @@ read_input <- function(x, max_bytes, n = Inf, call = sys.call(-1L)) {
   if (is.finite(n)) {
     return(readBin(src$con, "raw", n = n))
   }
+  chunk <- 1048576L # 1 MiB
   chunks <- list()
   total <- 0
   repeat {
-    b <- readBin(src$con, "raw", n = 1048576L)
+    b <- readBin(src$con, "raw", n = chunk)
     if (length(b) == 0L) {
       break
     }
@@ -231,16 +233,24 @@ match_arg <- function(x, choices, arg, call = sys.call(-1L)) {
   x
 }
 
-check_choice_int <- function(x, choices, arg, call = sys.call(-1L)) {
-  if (is.null(x)) {
+# One of `choices` as an integer, or NULL when `null` allows it.
+check_choice_int <- function(
+  x,
+  choices,
+  arg,
+  null = TRUE,
+  call = sys.call(-1L)
+) {
+  if (is.null(x) && null) {
     return(NULL)
   }
   if (!is.numeric(x) || length(x) != 1L || is.na(x) || !x %in% choices) {
     zpx_input_error(
       arg,
       sprintf(
-        "`%s` must be NULL or one of %s.",
+        "`%s` must be %sone of %s.",
         arg,
+        if (null) "NULL or " else "",
         paste(choices, collapse = ", ")
       ),
       call = call

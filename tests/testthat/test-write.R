@@ -222,3 +222,38 @@ test_that("lossless round trips hold on many random images", {
     )
   }
 })
+
+test_that("a malformed nativeRaster is refused before C reads it", {
+  no_dim <- structure(1:4, class = "nativeRaster")
+  expect_error(pix_write_png(no_dim), class = "zupix_input_error")
+  double_raster <- structure(matrix(0, 2, 2), class = "nativeRaster")
+  expect_error(pix_write_png(double_raster), class = "zupix_input_error")
+  empty <- structure(matrix(integer(), 0, 2), class = "nativeRaster")
+  expect_error(pix_write_qoi(empty), class = "zupix_input_error")
+})
+
+test_that("pix_write() without a file needs a format and returns bytes", {
+  img <- random_image(3L, 4L, 3L, 8L)
+  expect_error(pix_write(img), class = "zupix_input_error")
+  bytes <- pix_write(img, format = "qoi")
+  expect_type(bytes, "raw")
+  expect_identical(pix_read(bytes, as = "integer"), img)
+})
+
+test_that("compression, quality and method refuse NULL", {
+  img <- random_image(3L, 4L, 3L, 8L)
+  expect_error(
+    pix_write_png(img, compression = NULL),
+    class = "zupix_input_error"
+  )
+  expect_error(pix_write_jpeg(img, quality = NULL), class = "zupix_input_error")
+  expect_error(pix_write_webp(img, method = NULL), class = "zupix_input_error")
+})
+
+test_that("a JPEG ICC profile too large for 255 APP2 markers is refused", {
+  img <- random_image(2L, 2L, 3L, 8L)
+  icc <- raw(255 * 65519 + 1)
+  expect_error(pix_write_jpeg(img, icc = icc), class = "zupix_encode_error")
+  ok <- pix_write_jpeg(img, icc = raw(2 * 65519 + 1))
+  expect_identical(pix_icc(ok), raw(2 * 65519 + 1))
+})

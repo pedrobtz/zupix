@@ -86,6 +86,13 @@ zpx_status zpx_int_encode_jpeg(const uint8_t *src, uint32_t width,
     *detail = "the EXIF block is too large for a JPEG APP1 segment";
     return ZPX_ERR_ENCODE;
   }
+  /* jpeg_write_icc_profile() splits a profile into APP2 markers of 65,519
+   * bytes and numbers them in one byte: more than 255 wraps the numbering,
+   * and no reader can put the profile back together. */
+  if (opts->icc_len > (size_t) 255 * 65519) {
+    *detail = "the ICC profile is larger than JPEG's 16,707,345 bytes";
+    return ZPX_ERR_ENCODE;
+  }
   row = (size_t) width * (size_t) channels;
 
   ctx = (jpeg_ctx *) calloc(1, sizeof *ctx);
@@ -99,10 +106,15 @@ zpx_status zpx_int_encode_jpeg(const uint8_t *src, uint32_t width,
 
   if (setjmp(ctx->jmp.env)) {
     zpx_status s = ctx->dest.sink_failed ? ZPX_ERR_SINK : ZPX_ERR_ENCODE;
+    int code = ctx->jmp.code;
+    /* libjpeg-turbo's message for the error, unformatted: its table is
+     * static, so the string outlives ctx. */
+    if (s == ZPX_ERR_ENCODE)
+      *detail = code > 0 && code <= ctx->jerr.last_jpeg_message
+                    ? ctx->jerr.jpeg_message_table[code]
+                    : "libjpeg-turbo failed to encode the image";
     jpeg_destroy_compress(&ctx->cinfo);
     free(ctx);
-    if (s == ZPX_ERR_ENCODE)
-      *detail = "libjpeg-turbo failed to encode the image";
     return s;
   }
 

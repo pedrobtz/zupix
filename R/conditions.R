@@ -61,7 +61,9 @@ zpx_limit_error <- function(limit, value, cap, message, call = sys.call(-1L)) {
   )
 }
 
-# zpx_status in src/zpx_core.h, in order from ZPX_ERR_FORMAT.
+# zpx_status in inst/include/zupix.h, in order from ZPX_ERR_FORMAT. The
+# last, ZPX_ERR_SINK, is the encoder's sink failing: from R the sink is a
+# growable buffer (src/zpx_sink.c), which fails only when out of memory.
 zpx_status_kinds <- c(
   "format",
   "decode",
@@ -70,7 +72,7 @@ zpx_status_kinds <- c(
   "memory",
   "input",
   "encode",
-  "io"
+  "memory"
 )
 
 # zpx_limit_kind in src/zpx_core.h, in order from ZPX_LIMIT_SIDE.
@@ -113,8 +115,11 @@ zpx_raise_failure <- function(f, format, call = sys.call(-1L)) {
       ),
       sprintf("%s exceeds `%s`.", fmt, limit)
     )
+    # zpx_limit_error() never returns, nor does any zpx_abort() below.
     zpx_limit_error(limit, f$value, f$cap, message, call = call)
   }
+  # A format mismatch carries format codes, not limit numbers: `cap` is the
+  # format asked for and `value` the one the signature shows.
   if (kind == "format" && f$cap > 0) {
     message <- sprintf(
       "`format` is \"%s\" but the input is %s.",
@@ -133,7 +138,8 @@ zpx_raise_failure <- function(f, format, call = sys.call(-1L)) {
       substring(f$detail, 2),
       "."
     ),
-    memory = sprintf("Out of memory decoding %s.", fmt),
+    encode = sprintf("Can't encode %s: %s.", fmt, f$detail),
+    memory = sprintf("Not enough memory for this %s.", fmt),
     sprintf("zupix internal error: %s.", f$detail)
   )
   if (kind == "input") {

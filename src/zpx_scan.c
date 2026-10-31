@@ -552,6 +552,7 @@ zpx_status zpx_int_icc(const uint8_t *buf, size_t len, const zpx_meta *m,
       total += room - z.avail_out;
       if (total > cap) {
         inflateEnd(&z);
+        *out_len = (size_t) total; /* the bytes inflated so far */
         *detail = "the ICC profile inflates past max_metadata";
         return ZPX_ERR_LIMIT;
       }
