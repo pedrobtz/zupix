@@ -9,6 +9,7 @@
 test_that("only a runtime's own prefixes mark an instrumented build", {
   runtime <- c("__asan_init", "___ubsan_handle_add_overflow", "__gcov_init")
   runtime <- c(runtime, "__llvm_profile_runtime", "llvm_gcda_start_file")
+  runtime <- c(runtime, "_start_asan_globals", "_stop_asan_globals")
   expect_true(all(instrumentation_symbol(runtime)))
   leaked <- c("WebPMasanInit", "jpeg_tsan_hook", "zupix_gcov_x", "R_init_zupix")
   expect_false(any(instrumentation_symbol(leaked)))

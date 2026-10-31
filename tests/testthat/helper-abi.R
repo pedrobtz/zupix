@@ -43,7 +43,8 @@ exported_symbols <- function() {
 # A coverage or sanitizer runtime exports symbols of its own: gcov's
 # __gcov_*, clang's __llvm_gcov_*, llvm_gcda_* and __llvm_profile_*, and
 # the sanitizers' __asan_*, __ubsan_*, __tsan_*, __msan_*, __sancov_* and
-# __sanitizer_*. Matched as prefixes only (after any leading underscores), so
+# __sanitizer_*, plus the bounds the linker adds for ASan's globals section
+# (__start_asan_globals, __stop_asan_globals). Matched as prefixes only (after any leading underscores), so
 # a leaked vendored symbol that merely contains those letters is not taken
 # for one and still fails the ABI tests.
 instrumentation_symbol <- function(syms) {
@@ -57,7 +58,9 @@ instrumentation_symbol <- function(syms) {
     "tsan_",
     "msan_",
     "sancov",
-    "sanitizer_"
+    "sanitizer_",
+    "start_asan_globals",
+    "stop_asan_globals"
   )
   grepl(paste0("^_*(", paste(runtimes, collapse = "|"), ")"), syms)
 }
