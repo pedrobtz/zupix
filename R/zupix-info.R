@@ -18,10 +18,10 @@ vendored <- data.frame(
     ""
   ),
   used_for = c(
-    "decoding PNG, JPEG, WebP and QOI",
+    "decoding PNG, JPEG and WebP",
     "encoding JPEG",
     "encoding WebP",
-    "encoding QOI"
+    "encoding and decoding QOI"
   )
 )
 
