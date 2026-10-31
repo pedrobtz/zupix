@@ -102,6 +102,17 @@ test_that("a directory is an I/O error, a non-scalar path an input error", {
   expect_error(pix_exif(NA_character_), class = "zupix_input_error")
 })
 
+test_that("a file that cannot be read is an I/O error", {
+  skip_on_os("windows")
+  f <- withr::local_tempfile(fileext = ".png")
+  writeBin(make_png(matrix(0L), 1L, 0L), f)
+  Sys.chmod(f, "0000")
+  withr::defer(Sys.chmod(f, "0644"))
+  skip_if(file.access(f, 4L) == 0L, "running as a user who can read it")
+  expect_error(pix_read(f), class = "zupix_io_error")
+  expect_error(pix_info(f), class = "zupix_io_error")
+})
+
 test_that("connections are read whole, and must be binary and open", {
   p <- make_png(samples_for(2L, 2L, 3L, 255L), 2L, 2L)
   f <- withr::local_tempfile(fileext = ".png")
