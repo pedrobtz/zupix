@@ -16,6 +16,8 @@ typedef struct {
   int failed;
 } out_t;
 
+/* Untested, as are the ZPX_ERR_SINK returns it leads to: R's sink fails
+ * only when out of memory (zpx_sink.c). */
 static void put(out_t *o, const uint8_t *p, size_t n) {
   if (!o->failed && n > 0 && o->write(o->closure, p, n) != 0) o->failed = 1;
 }
@@ -115,6 +117,8 @@ zpx_status zpx_int_encode_png(const uint8_t *src, uint32_t width,
     return ZPX_ERR_ARGUMENT;
   }
   bpp = (size_t) channels * (bits / 8);
+  /* Untested: width is at most 2^31 - 1, so this fails only where size_t
+   * is 32 bits and the image could not have been allocated anyway. */
   if (width > (SIZE_MAX - 1) / bpp) return ZPX_ERR_ENCODE;
   row_len = (size_t) width * bpp;
 
@@ -123,13 +127,15 @@ zpx_status zpx_int_encode_png(const uint8_t *src, uint32_t width,
   rows = (uint8_t *) malloc(2 * row_len);
   cand = (uint8_t *) malloc(5 * (row_len + 1));
   zbuf = (uint8_t *) malloc(zcap);
-  if (!rows || !cand || !zbuf) {
+  if (!rows || !cand || !zbuf) { /* Untested: allocation */
     free(rows); free(cand); free(zbuf);
     return ZPX_ERR_MEMORY;
   }
   memset(&z, 0, sizeof z);
   /* Z_FILTERED, as libpng uses for filtered rows: filtered data is mostly
-   * small values, which the default strategy matches poorly and slowly. */
+   * small values, which the default strategy matches poorly and slowly.
+   * Untested: deflateInit2() fails only on allocation, `level` having been
+   * checked above. */
   if (deflateInit2(&z, level, Z_DEFLATED, 15, 8,
                    level == 0 ? Z_DEFAULT_STRATEGY : Z_FILTERED) != Z_OK) {
     free(rows); free(cand); free(zbuf);
@@ -148,11 +154,13 @@ zpx_status zpx_int_encode_png(const uint8_t *src, uint32_t width,
     /* "ICC profile", NUL, compression method 0, the zlib stream. */
     uLongf clen = compressBound((uLong) opts->icc_len);
     uint8_t *iccp = (uint8_t *) malloc(13 + clen);
-    if (!iccp) { s = ZPX_ERR_MEMORY; goto done; }
+    if (!iccp) { s = ZPX_ERR_MEMORY; goto done; } /* Untested: allocation */
     memcpy(iccp, "ICC profile\0\0", 13);
     if (compress2(iccp + 13, &clen, opts->icc, (uLong) opts->icc_len, 9) !=
             Z_OK ||
         13 + clen > 0x7fffffffu) {
+      /* Untested: compress2() fails only on allocation, and a 2 GiB
+       * profile is too large for the test suite. */
       free(iccp);
       *detail = "the ICC profile could not be compressed";
       s = ZPX_ERR_ENCODE;
@@ -166,7 +174,7 @@ zpx_status zpx_int_encode_png(const uint8_t *src, uint32_t width,
     chunk(&o, "sRGB", &intent, 1);
   }
   if (opts && opts->exif && opts->exif_len > 0) {
-    if (opts->exif_len > 0x7fffffffu) {
+    if (opts->exif_len > 0x7fffffffu) { /* Untested: a 2 GiB block */
       *detail = "the EXIF block is too large for a PNG chunk";
       s = ZPX_ERR_ENCODE;
       goto done;
@@ -202,6 +210,8 @@ zpx_status zpx_int_encode_png(const uint8_t *src, uint32_t width,
         best_cost = k;
       }
     }
+    /* Untested, as is the Z_FINISH call below: deflate() fails only on a
+     * misused stream. */
     if (deflate_into(&o, &z, cand + (size_t) best * (row_len + 1),
                      row_len + 1, Z_NO_FLUSH, zbuf, zcap) != 0) {
       s = ZPX_ERR_ENCODE;

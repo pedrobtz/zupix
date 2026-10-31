@@ -153,7 +153,7 @@ static zpx_status api_decode(const uint8_t *buf, size_t len,
       inter > SIZE_MAX)
     return ZPX_ERR_LIMIT;
   tmp = (uint8_t *) malloc((size_t) inter + 1);
-  if (tmp == NULL) return ZPX_ERR_MEMORY;
+  if (tmp == NULL) return ZPX_ERR_MEMORY; /* Untested: allocation */
   s = zpx_int_decode_image(buf, len, lim, wide ? ZPX_PIX_RGBA16 : ZPX_PIX_RGBA8,
                            tmp, (size_t) p.width * ibpp, (size_t) inter, &p);
   if (s == ZPX_OK) {
@@ -228,7 +228,7 @@ static zpx_status repack(const uint8_t *src, uint32_t w, uint32_t h,
   if (drop_alpha && in_c == 4) oc = 3;
   n = (size_t) w * h * (size_t) oc * (size_t) (ob / 8);
   b = (uint8_t *) malloc(n ? n : 1);
-  if (b == NULL) return ZPX_ERR_MEMORY;
+  if (b == NULL) return ZPX_ERR_MEMORY; /* Untested: allocation */
   for (uint32_t y = 0; y < h; y++) {
     const uint8_t *r = src + (size_t) y * stride;
     for (uint32_t x = 0; x < w; x++) {

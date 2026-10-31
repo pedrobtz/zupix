@@ -30,6 +30,8 @@ typedef struct {
   int failed;
 } out_t;
 
+/* Untested, as are the ZPX_ERR_SINK returns it leads to: R's sink fails
+ * only when out of memory (zpx_sink.c). */
 static void put(out_t *o, const uint8_t *p, size_t n) {
   if (!o->failed && n > 0 && o->write(o->closure, p, n) != 0) o->failed = 1;
 }
@@ -60,6 +62,7 @@ static zpx_status wrap(const uint8_t *file, size_t len, uint32_t width,
     put(o, file, len);
     return o->failed ? ZPX_ERR_SINK : ZPX_OK;
   }
+  /* Untested: libwebp always writes a RIFF file of at least 20 bytes. */
   if (len < 20 || memcmp(file, "RIFF", 4) != 0) return ZPX_ERR_ENCODE;
 
   memset(vp8x, 0, sizeof vp8x);
@@ -77,7 +80,7 @@ static zpx_status wrap(const uint8_t *file, size_t len, uint32_t width,
   /* "WEBP", VP8X, ICCP, the image chunks, EXIF. */
   body = 4 + 18 + (has_icc ? 8 + icc_pad : 0) + (len - pos) +
          (has_exif ? 8 + exif_pad : 0);
-  if (body > 0xfffffff0u) return ZPX_ERR_ENCODE;
+  if (body > 0xfffffff0u) return ZPX_ERR_ENCODE; /* Untested: a 4 GiB file */
   memcpy(head, "RIFF", 4);
   le32(head + 4, (uint32_t) body);
   memcpy(head + 8, "WEBP", 4);
@@ -110,6 +113,7 @@ zpx_status zpx_int_encode_webp(const uint8_t *src, uint32_t width,
     *detail = "WebP holds at most 16,383 pixels a side";
     return ZPX_ERR_ENCODE;
   }
+  /* Untested: fails only on a libwebp ABI mismatch, fixed at build time. */
   if (!WebPConfigInit(&config) || !WebPPictureInit(&pic)) {
     *detail = "libwebp version mismatch";
     return ZPX_ERR_ENCODE;
@@ -132,7 +136,7 @@ zpx_status zpx_int_encode_webp(const uint8_t *src, uint32_t width,
   ok = channels == 4
            ? WebPPictureImportRGBA(&pic, src, (int) (width * 4))
            : WebPPictureImportRGB(&pic, src, (int) (width * 3));
-  if (!ok) {
+  if (!ok) { /* Untested: allocation */
     WebPPictureFree(&pic);
     return ZPX_ERR_MEMORY;
   }
@@ -141,6 +145,8 @@ zpx_status zpx_int_encode_webp(const uint8_t *src, uint32_t width,
   pic.custom_ptr = &mem;
   ok = WebPEncode(&config, &pic);
   if (!ok) {
+    /* Untested: with the size and options checked above, libwebp fails
+     * only when out of memory. */
     *detail = pic.error_code == VP8_ENC_ERROR_OUT_OF_MEMORY
                   ? "out of memory"
                   : "libwebp failed to encode the image";

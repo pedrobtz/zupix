@@ -96,7 +96,7 @@ zpx_status zpx_int_encode_jpeg(const uint8_t *src, uint32_t width,
   row = (size_t) width * (size_t) channels;
 
   ctx = (jpeg_ctx *) calloc(1, sizeof *ctx);
-  if (ctx == NULL) return ZPX_ERR_MEMORY;
+  if (ctx == NULL) return ZPX_ERR_MEMORY; /* Untested: allocation */
   cinfo = &ctx->cinfo;
   cinfo->err = jpeg_std_error(&ctx->jerr);
   cinfo->client_data = &ctx->jmp;
@@ -105,6 +105,8 @@ zpx_status zpx_int_encode_jpeg(const uint8_t *src, uint32_t width,
   ctx->dest.jmp = &ctx->jmp;
 
   if (setjmp(ctx->jmp.env)) {
+    /* An error from libjpeg-turbo is tested (test-write.R); a failed sink
+     * is not: R's sink fails only when out of memory (zpx_sink.c). */
     zpx_status s = ctx->dest.sink_failed ? ZPX_ERR_SINK : ZPX_ERR_ENCODE;
     int code = ctx->jmp.code;
     /* libjpeg-turbo's message for the error, unformatted: its table is
