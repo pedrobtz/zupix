@@ -42,10 +42,14 @@ test_that("lossless WebP round trips are identical, RGB and RGBA", {
   }
 })
 
-test_that("lossy WebP keeps alpha", {
+test_that("lossy WebP keeps alpha exactly", {
   img <- random_image(8L, 8L, 4L, 8L)
-  back <- pix_read(pix_write_webp(img, quality = 90), as = "integer")
-  expect_identical(dim(back), c(8L, 8L, 4L))
+  for (q in c(0, 50, 90)) {
+    back <- pix_read(pix_write_webp(img, quality = q), as = "integer")
+    expect_identical(dim(back), c(8L, 8L, 4L))
+    # libwebp compresses the alpha plane losslessly by default.
+    expect_identical(back[,, 4], unclass(img)[,, 4])
+  }
   expect_true(pix_info(pix_write_webp(img))$alpha)
 })
 
