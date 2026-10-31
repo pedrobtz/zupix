@@ -120,6 +120,22 @@ make_qoi <- function(img, colourspace = 0L) {
   )
 }
 
+# A QOI image of `height` x `width` pixels, every one `rgb`: one QOI_OP_RGB
+# chunk, then QOI_OP_RUN chunks of at most `run` (1 to 62) pixels each.
+make_qoi_runs <- function(height, width, rgb, run = 62L) {
+  n <- height * width - 1L
+  runs <- c(rep(run, n %/% run), if (n %% run > 0) n %% run)
+  c(
+    charToRaw("qoif"),
+    be32(width),
+    be32(height),
+    as.raw(c(3L, 0L)),
+    as.raw(c(0xfe, rgb)),
+    as.raw(0xc0 + runs - 1L),
+    as.raw(c(0, 0, 0, 0, 0, 0, 0, 1))
+  )
+}
+
 # Sample values for an image of the given size, deterministic.
 samples_for <- function(height, width, per_pixel, max) {
   matrix(
