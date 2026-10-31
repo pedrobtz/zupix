@@ -136,11 +136,14 @@ zpx_raise_failure <- function(f, format, call = sys.call(-1L)) {
     )
     zpx_abort(kind, message, format = format, detail = f$detail, call = call)
   }
+  # Wuffs prefixes its messages with its package name ("jpeg: ..."), which
+  # the message already gives as `fmt`.
+  detail <- sub("^[a-z]+: ", "", f$detail)
   message <- switch(
     kind,
     format = "The input is not a PNG, JPEG, WebP or QOI image.",
-    decode = sprintf("Can't decode %s: %s.", fmt, f$detail),
-    unsupported = sprintf("%s uses an unsupported feature: %s.", fmt, f$detail),
+    decode = sprintf("Can't decode %s: %s.", fmt, detail),
+    unsupported = sprintf("%s uses an unsupported feature: %s.", fmt, detail),
     input = paste0(
       toupper(substr(f$detail, 1, 1)),
       substring(f$detail, 2),

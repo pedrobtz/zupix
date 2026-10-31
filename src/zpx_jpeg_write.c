@@ -109,12 +109,17 @@ zpx_status zpx_int_encode_jpeg(const uint8_t *src, uint32_t width,
      * is not: R's sink fails only when out of memory (zpx_sink.c). */
     zpx_status s = ctx->dest.sink_failed ? ZPX_ERR_SINK : ZPX_ERR_ENCODE;
     int code = ctx->jmp.code;
-    /* libjpeg-turbo's message for the error, unformatted: its table is
-     * static, so the string outlives ctx. */
-    if (s == ZPX_ERR_ENCODE)
-      *detail = code > 0 && code <= ctx->jerr.last_jpeg_message
-                    ? ctx->jerr.jpeg_message_table[code]
-                    : "libjpeg-turbo failed to encode the image";
+    /* libjpeg-turbo's message for the error: its table is static, so the
+     * string outlives ctx. A message with printf parameters would need a
+     * buffer that outlives ctx too, so it gives way to a general one. */
+    if (s == ZPX_ERR_ENCODE) {
+      const char *m = code > 0 && code <= ctx->jerr.last_jpeg_message
+                          ? ctx->jerr.jpeg_message_table[code]
+                          : NULL;
+      *detail = m != NULL && strchr(m, '%') == NULL
+                    ? m
+                    : "libjpeg-turbo refused the image or its parameters";
+    }
     jpeg_destroy_compress(&ctx->cinfo);
     free(ctx);
     return s;

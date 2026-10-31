@@ -44,7 +44,7 @@
       pix_read(arithmetic)
     Condition
       Error in `pix_read()`:
-      ! JPEG uses an unsupported feature: jpeg: unsupported arithmetic coding.
+      ! JPEG uses an unsupported feature: unsupported arithmetic coding.
 
 ---
 
