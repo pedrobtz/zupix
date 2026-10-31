@@ -22,13 +22,14 @@ zupix compiles every codec into the package and treats every file as
 hostile:
 
 - **No system library.** Installing zupix needs a C compiler and the
-  zlib R is built with, nothing else. Decoding goes through
-  [Wuffs](https://github.com/google/wuffs); encoding through zupix’s own
-  PNG writer, [libjpeg-turbo](https://libjpeg-turbo.org/),
-  [libwebp](https://developers.google.com/speed/webp) and
-  [qoi.h](https://qoiformat.org/).
+  zlib R is built with, nothing else. PNG, JPEG and WebP decode through
+  [Wuffs](https://github.com/google/wuffs) and QOI through
+  [qoi.h](https://qoiformat.org/); encoding goes through zupix’s own PNG
+  writer, [libjpeg-turbo](https://libjpeg-turbo.org/),
+  [libwebp](https://developers.google.com/speed/webp) and qoi.h.
 - **Built for hostile input.** Wuffs’s decoders are memory-safe by
-  construction, and every size an image declares is checked against
+  construction, QOI streams are checked complete before qoi.h decodes
+  them, and every size an image declares is checked against
   `pix_limits()` before anything is allocated. zupix’s own metadata
   scanners are fuzzed.
 - **The pixels the file holds.** No colour management, gamma or

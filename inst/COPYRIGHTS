@@ -115,7 +115,7 @@ src/vendor/qoi/ (qoi.h, commit ffb2d2cb)
 ---------------------------------------
 
 The single header from https://github.com/phoboslab/qoi, which has no
-release tags; the commit is the pin.
+release tags; the commit is the pin. zupix encodes and decodes QOI with it.
 
   Copyright (c) 2021, 2022 Dominic Szablewski.
 
