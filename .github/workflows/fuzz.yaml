@@ -16,7 +16,7 @@ on:
       - '.agents/**'
       - 'docs/**'
   schedule:
-    - cron: "14 14 * * *"
+    - cron: "14 14 * * 4"  # weekly, Thursdays
   workflow_dispatch:
 
 name: fuzz
